@@ -1,13 +1,12 @@
 #include "process_array.h"
 
 
-process_arr *g_processes;
 
 process_arr init_array(){
     process_arr arr_ptr;
     arr_ptr.capacity=5;
-    arr_ptr.count=10;
-    arr_ptr.entries=NULL;
+    arr_ptr.count=0;
+    arr_ptr.entries=malloc(arr_ptr.capacity *sizeof(process_info));
     return arr_ptr;
 }
 

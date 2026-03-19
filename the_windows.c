@@ -1,14 +1,16 @@
 #include "the_windows.h"
 #include"process_array.h"
+#include"proclist.h"
+
+
 
 HWND CREATE_LIST(HWND PARENT,process_arr *array){
 
         HWND hList;
-        INITCOMMONCONTROLSEX icex;
+        INITCOMMONCONTROLSEX icex = {0};
         icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
         icex.dwICC = ICC_LISTVIEW_CLASSES;
         InitCommonControlsEx(&icex);
-
         // Create ListView
         hList = CreateWindowEx(
             WS_EX_CLIENTEDGE,
@@ -39,13 +41,13 @@ HWND CREATE_LIST(HWND PARENT,process_arr *array){
             for(size_t i =0 ; i<array->count;i++){
             LVITEM item;
             item.mask = LVIF_TEXT;
-            item.iItem = 0;
+            item.iItem = (int)i;
             item.iSubItem = 0;
             item.pszText = array->entries[i].NAME;
             ListView_InsertItem(hList,&item);
 
             char pid[32];
-            printf(pid,"%lu",array->entries[i].PID);
+            snprintf(pid,sizeof(pid),"%d",array->entries[i].PID);
             ListView_SetItemText(hList,i,1,pid);
             }
     return hList;
@@ -57,8 +59,6 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             DestroyWindow(hwnd);
             break;
         case WM_CREATE:
-
-            CREATE_LIST(hwnd,g_processes);
             HMENU hmenu,hsub,hsub2;
             hmenu=CreateMenu();
 
@@ -120,7 +120,7 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
         return 0;
     }
 
-    hwnd = CreateWindowEx(WS_EX_CLIENTEDGE,"myWindowClass","The title of my window",WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,CW_USEDEFAULT,240,120,NULL,NULL,hInstance,NULL);
+    hwnd = CreateWindowEx(WS_EX_CLIENTEDGE,"myWindowClass","The title of my window",WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,CW_USEDEFAULT,860,680,NULL,NULL,hInstance,NULL);
 
     if(hwnd == NULL){
         MessageBox(NULL,"Window Creation Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
@@ -130,6 +130,8 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
     ShowWindow(hwnd,nCmdShow);
     UpdateWindow(hwnd);
 
+    getproclist();
+    CREATE_LIST(hwnd,&global_process);
     while(GetMessage(&msg,NULL,0,0) > 0){
         TranslateMessage(&msg);
         DispatchMessage(&msg);

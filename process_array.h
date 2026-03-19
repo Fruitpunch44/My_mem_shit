@@ -19,6 +19,7 @@ typedef struct{
     size_t count;
 }process_arr;
 
+extern process_arr global_process;
 process_arr init_array();
 void add_array(process_arr *array_list,process_info *entries);
 

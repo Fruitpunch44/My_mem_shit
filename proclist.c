@@ -1,8 +1,10 @@
 #include"proclist.h"
 #include"process_array.h"
 
+
+process_arr global_process;
 BOOL getproclist(){
-    process_arr processes = init_array();
+    global_process =init_array();
     HANDLE hprocsnap;
     HANDLE process;
     PROCESSENTRY32 entry32;
@@ -45,10 +47,11 @@ BOOL getproclist(){
         fprintf(stdout,"thread count    = %d\n",entry32.cntThreads);
         fprintf(stdout,"priority class  = %d\n",priorityclass);
         fprintf(stdout,"\n");
-        info->NAME=entry32.szExeFile;
+        info->NAME=_strdup(entry32.szExeFile);
         info->PID=entry32.th32ProcessID;
-        add_array(&process,info);
+        add_array(&global_process,info);
         listprocmodules(entry32.th32ProcessID);
+        free(info);
 
     }
     CloseHandle(hprocsnap);
@@ -82,10 +85,4 @@ BOOL listprocmodules(DWORD dwpid){
     }
     CloseHandle(MODULE);
     return TRUE;
-}
-
-int main(int argc,  char **argv[]){
-    getproclist();
-
-    return 0;
 }
