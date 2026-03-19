@@ -1,6 +1,8 @@
 #include"proclist.h"
+#include"process_array.h"
 
 BOOL getproclist(){
+    process_arr processes = init_array();
     HANDLE hprocsnap;
     HANDLE process;
     PROCESSENTRY32 entry32;
@@ -33,9 +35,19 @@ BOOL getproclist(){
             fprintf(stderr,"an error %s occured\n",strerror(GetLastError()));
             CloseHandle(process);
         }
-
-        fprintf(stdout,"process id      =0x %08x\n",entry32.th32ProcessID);
-        fprintf(stdout,"thread count      = %d\n",entry32.cntThreads);
+        process_info *info= malloc(sizeof(process_info));
+        if(!info){
+            fprintf(stderr,"error in mem alloc");
+            return FALSE;
+        }
+        fprintf(stdout,"----PROCESS INFO----\n");
+        fprintf(stdout,"process id      = %d\n",entry32.th32ProcessID);
+        fprintf(stdout,"thread count    = %d\n",entry32.cntThreads);
+        fprintf(stdout,"priority class  = %d\n",priorityclass);
+        fprintf(stdout,"\n");
+        info->NAME=entry32.szExeFile;
+        info->PID=entry32.th32ProcessID;
+        add_array(&process,info);
         listprocmodules(entry32.th32ProcessID);
 
     }
@@ -58,9 +70,15 @@ BOOL listprocmodules(DWORD dwpid){
          CloseHandle(MODULE);
          return FALSE;
     }
+    fprintf(stdout,"----MODULES----\n");
     while(Module32Next(MODULE,&me32)){
         fprintf(stdout,"MOUDLE NAME :%s\n",me32.szModule);
+        fprintf(stdout,"Exe Path = %s\n",me32.szExePath);
+        fprintf(stdout,"Base address = 0x%08x\n",me32.modBaseAddr);
+        fprintf(stdout,"Base Size = %d\n",me32.modBaseSize);
 
+        fprintf(stdout,"\n");
+        
     }
     CloseHandle(MODULE);
     return TRUE;
