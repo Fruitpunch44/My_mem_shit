@@ -25,13 +25,14 @@ void read_memory(HANDLE proc,unsigned long long addr){
             printf("\n");
 }
 }
+
 void get_process_id(DWORD proc_id){
     HANDLE proc;
-    MEMORY_BASIC_INFORMATION mbi;
+    MEMORY_BASIC_INFORMATION mbi ={0};
     unsigned long long base_addr = 0;
     proc= OpenProcess(PROCESS_QUERY_INFORMATION |PROCESS_VM_READ,FALSE,proc_id);
     if(proc== NULL){
-        fprintf(stderr,"unable to open process \npls pass in a valid pid %s",strerror(GetLastError()));
+        fprintf(stderr,"unable to open process \n pls pass in a valid pid %s",strerror(GetLastError()));
         return;
     }
     //the whole idea of virtual query is to the get the memmory info of process and check it's various states
@@ -50,8 +51,15 @@ void get_process_id(DWORD proc_id){
     CloseHandle(proc);
 }
 
-int main(){
-    DWORD proc_id= 11176;
+int main(int argc,char *argv[]){
+    for(int i = 0;i<argc;i++){
+        fprintf(stdout,"arg :%d :%s\n",i,argv[i]);
+    }
+    if(argc<2){
+        fprintf(stderr,"lol not enough args");
+        exit(EXIT_FAILURE);
+    }
+    DWORD proc_id =(DWORD)atoi(argv[1]);
     get_process_id(proc_id);
     return 0;
 }

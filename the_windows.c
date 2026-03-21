@@ -2,8 +2,53 @@
 #include"process_array.h"
 #include"proclist.h"
 
+HWND CREATE_SIDE_OPTIONS(HWND Parent);
+//add pid serach
+//add memory addition
+HWND CREATE_BOTTOM_LIST(HWND PARENT){
+    HWND hlist_bottom;
+    INITCOMMONCONTROLSEX icex ={0};
+    icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
+    icex.dwICC = ICC_LISTVIEW_CLASSES;
+    hlist_bottom = CreateWindowEx(
+            WS_EX_CLIENTEDGE,
+            WC_LISTVIEW,
+            "",
+            WS_CHILD | WS_VISIBLE | LVS_REPORT,
+            20,350,800,200,
+            PARENT,
+            NULL,
+            GetModuleHandle(NULL),
+            NULL
+            );
+      // Add column
+    LVCOLUMN col;
+    col.mask = LVCF_TEXT | LVCF_WIDTH;
+    col.cx = 200;
+    col.pszText = "ACTIVE";
+    ListView_InsertColumn(hlist_bottom,0,&col);
 
+    LVCOLUMN col2;
+    col2.mask = LVCF_TEXT | LVCF_WIDTH; 
+    col2.cx = 200;
+    col2.pszText = "DESCRIPTION";
+    ListView_InsertColumn(hlist_bottom,1,&col2);
 
+    LVCOLUMN col3;
+    col3.mask = LVCF_TEXT | LVCF_WIDTH; 
+    col3.cx = 200;
+    col3.pszText = "TYPE";
+    ListView_InsertColumn(hlist_bottom,2,&col3);
+
+    LVCOLUMN col4;
+    col4.mask = LVCF_TEXT | LVCF_WIDTH; 
+    col4.cx = 200;
+    col4.pszText = "VALUE";
+    ListView_InsertColumn(hlist_bottom,3,&col4);
+
+    return hlist_bottom;
+
+}
 HWND CREATE_LIST(HWND PARENT,process_arr *array){
 
         HWND hList;
@@ -17,7 +62,7 @@ HWND CREATE_LIST(HWND PARENT,process_arr *array){
             WC_LISTVIEW,
             "",
             WS_CHILD | WS_VISIBLE | LVS_REPORT,
-            20,20,400,600,
+            20,20,400,300,
             PARENT,
             NULL,
             GetModuleHandle(NULL),
@@ -34,8 +79,15 @@ HWND CREATE_LIST(HWND PARENT,process_arr *array){
             LVCOLUMN col2;
             col2.mask = LVCF_TEXT | LVCF_WIDTH; 
             col2.cx = 200;
-            col2.pszText = "pid";
+            col2.pszText = "PID";
             ListView_InsertColumn(hList,1,&col2);
+
+            LVCOLUMN col3;
+            col3.mask = LVCF_TEXT | LVCF_WIDTH; 
+            col3.cx = 200;
+            col3.pszText = "Thread";
+            ListView_InsertColumn(hList,2,&col3);
+
 
             // Add row
             for(size_t i =0 ; i<array->count;i++){
@@ -50,6 +102,7 @@ HWND CREATE_LIST(HWND PARENT,process_arr *array){
             snprintf(pid,sizeof(pid),"%d",array->entries[i].PID);
             ListView_SetItemText(hList,i,1,pid);
             }
+
     return hList;
 }
 
@@ -132,6 +185,7 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
     getproclist();
     CREATE_LIST(hwnd,&global_process);
+    CREATE_BOTTOM_LIST(hwnd);
     while(GetMessage(&msg,NULL,0,0) > 0){
         TranslateMessage(&msg);
         DispatchMessage(&msg);
