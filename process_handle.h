@@ -1,14 +1,10 @@
 #ifndef PROC_H
 #define PROC_H
-
 #include<stdio.h>
 #include<stdlib.h>
 #include<windows.h>
 #include<winternl.h>
-
 #define BUFF_SIZE 206
-
-
 
 typedef enum _MEMORY_INFORMATION_CLASS
 {
@@ -23,7 +19,7 @@ typedef NTSTATUS(NTAPI *pZwReadVirtualMemory)(
 	  SIZE_T *lpNumberOfBytesRead
 );
 
-typedef NTSTATUS(NTAPI *pZwWriteVirtualMemory)( 
+typedef NTSTATUS(NTAPI *pZwriteVirtualMemory)( 
     HANDLE hProcess,
     LPCVOID BaseAddress,
     LPVOID Buffer,
@@ -40,10 +36,11 @@ typedef NTSTATUS(NTAPI *pNtQueryVirtualMemory)(
     PSIZE_T ReturnLength
 );
 
+//void string_search(char *string_to_find);
+
+
 void read_memory(HANDLE proc,unsigned long long addr);
 void get_process_id(DWORD proc_id);
-void string_search(char *string_to_find);
-
 
 
 

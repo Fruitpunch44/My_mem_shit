@@ -1,11 +1,10 @@
 #include "the_windows.h"
-#include"process_array.h"
 #include"proclist.h"
+#include"process_handle.h"
 
 /*todo
 add string search function
 create a singular group box for the options*/ 
-
 HWND CREATE_GROUP_BOX(HWND Parent){
     HWND group_box;
     int x_padding = 20;
@@ -70,7 +69,7 @@ HWND CREATE_GROUP_BOX(HWND Parent){
 
     return group_box;
 }
-HWND CREATE_LEFT_SIDE_Table(HWND PARENT){
+HWND CREATE_LEFT_SIDE_Table(HWND PARENT,address_arr *addr_arr){
     HWND hlist_left_table;
     hlist_left_table = CreateWindowEx(
             WS_EX_CLIENTEDGE,
@@ -101,7 +100,18 @@ HWND CREATE_LEFT_SIDE_Table(HWND PARENT){
     col3.pszText = "Previous";
     ListView_InsertColumn(hlist_left_table,2,&col3);
 
+     for(size_t i =0 ; i<addr_arr->count;i++){
+            LVITEM item;
+            item.mask = LVIF_TEXT;
+            item.iItem = (int)i;
+            item.iSubItem = 0;
+            char buff[43];
+            sprintf(buff,"%llu",addr_arr->info[i].addr);
+            item.pszText = buff;
+            ListView_InsertItem(hlist_left_table,&item);
+
     }
+}
         
 HWND CREATE_SIDE_OPTIONS(HWND Parent){
     HWND h_options;
@@ -230,7 +240,7 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             DestroyWindow(hwnd);
             break;
         case WM_CREATE:
-            CREATE_LEFT_SIDE_Table(hwnd);
+            CREATE_LEFT_SIDE_Table(hwnd,&global_address_info);
             CREATE_BOTTOM_LIST(hwnd);
             CREATE_SIDE_OPTIONS(hwnd);
             CREATE_GROUP_BOX(hwnd);
@@ -310,11 +320,10 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
         MessageBox(NULL,"Window Creation Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
         return 0;
     }
-
+    DWORD id= 7136;
+    get_process_id(id);
     ShowWindow(hwnd,nCmdShow);
     UpdateWindow(hwnd);
-
-
     while(GetMessage(&msg,NULL,0,0) > 0){
         TranslateMessage(&msg);
         DispatchMessage(&msg);
