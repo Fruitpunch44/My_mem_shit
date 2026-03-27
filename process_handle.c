@@ -1,10 +1,9 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<windows.h>
-#include<strings.h>
-#define BUFF_SIZE 206
+#include"process_handle.h"
 
-
+// void write_memory(HANDLE process, BYTE *address,BYTE value);
+void string_search(char *string_to_find){
+    
+}
 void read_memory(HANDLE proc,unsigned long long addr){
     //you technically can read out all
     SIZE_T number_of_bytes_read;
@@ -13,7 +12,7 @@ void read_memory(HANDLE proc,unsigned long long addr){
         fprintf(stderr,"error in allocaring memory for buffer\n");
         return;
     }
-    if(!ReadProcessMemory(proc,(LPCVOID)addr,buff,BUFF_SIZE,&number_of_bytes_read)){
+    if(!ZwReadVirtualMemory(proc,(LPCVOID)addr,buff,BUFF_SIZE,&number_of_bytes_read)){
         fprintf(stderr,"error in reading from 0%p\n",(LPCVOID)addr);
         free(buff);
         return;
@@ -52,6 +51,8 @@ void get_process_id(DWORD proc_id){
 }
 
 int main(int argc,char *argv[]){
+    HMODULE ntdll = GetModuleHandleA("ntdll.dll");
+    
     for(int i = 0;i<argc;i++){
         fprintf(stdout,"arg :%d :%s\n",i,argv[i]);
     }

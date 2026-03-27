@@ -2,14 +2,137 @@
 #include"process_array.h"
 #include"proclist.h"
 
-HWND CREATE_SIDE_OPTIONS(HWND Parent);
+/*todo
+add string search function
+create a singular group box for the options*/ 
+
+HWND CREATE_GROUP_BOX(HWND Parent){
+    HWND group_box;
+    int x_padding = 20;
+    int y_padding = 40;
+    int gap_y = 20;
+    group_box = CreateWindowEx(0,
+    "BUTTON",
+    "Mem scan options",
+    BS_GROUPBOX |WS_VISIBLE | WS_CHILD,
+    520,130,270,210,
+    Parent,
+    NULL,
+    GetModuleHandle(NULL),
+    NULL);
+    CreateWindowEx(
+        0,
+        "STATIC",          // <-- this is the label
+        "Start:",          // <-- text to display
+        WS_VISIBLE | WS_CHILD,
+        x_padding,y_padding,100,25,
+        group_box,
+        NULL,
+        GetModuleHandle(NULL),
+        NULL
+    );
+    y_padding +=gap_y;
+    CreateWindowEx(
+        WS_EX_CLIENTEDGE,
+        "EDIT",
+        "",
+        WS_BORDER|WS_CHILD|WS_VISIBLE,
+        x_padding,y_padding,100,20,
+        group_box,
+        NULL,
+        GetModuleHandle(NULL),
+        NULL);
+        y_padding +=gap_y;
+
+
+    CreateWindowEx(
+        0,
+        "STATIC",          // <-- this is the label
+        "Stop:",          // <-- text to display
+        WS_VISIBLE | WS_CHILD,
+        x_padding,y_padding,100,25,
+        group_box,
+        NULL,
+        GetModuleHandle(NULL),
+        NULL);
+        y_padding +=gap_y;
+
+    CreateWindowEx(
+        WS_EX_CLIENTEDGE,
+        "EDIT",
+        "",
+        WS_BORDER|WS_CHILD|WS_VISIBLE,
+        x_padding,y_padding,100,20,
+        group_box,
+        NULL,
+        GetModuleHandle(NULL),
+        NULL);
+
+    return group_box;
+}
+HWND CREATE_LEFT_SIDE_Table(HWND PARENT){
+    HWND hlist_left_table;
+    hlist_left_table = CreateWindowEx(
+            WS_EX_CLIENTEDGE,
+            WC_LISTVIEW,
+            "",
+            WS_CHILD | WS_VISIBLE | LVS_REPORT,
+            20,20,400,300,
+            PARENT,
+            NULL,
+            GetModuleHandle(NULL),
+            NULL
+            );
+    LVCOLUMN col;
+    col.mask = LVCF_TEXT | LVCF_WIDTH;
+    col.cx = 200;
+    col.pszText = "Address";
+    ListView_InsertColumn(hlist_left_table,0,&col);
+
+    LVCOLUMN col2;
+    col2.mask = LVCF_TEXT | LVCF_WIDTH; 
+    col2.cx = 200;
+    col2.pszText = "Value";
+    ListView_InsertColumn(hlist_left_table,1,&col2);
+
+    LVCOLUMN col3;
+    col3.mask = LVCF_TEXT | LVCF_WIDTH; 
+    col3.cx = 200;
+    col3.pszText = "Previous";
+    ListView_InsertColumn(hlist_left_table,2,&col3);
+
+    }
+        
+HWND CREATE_SIDE_OPTIONS(HWND Parent){
+    HWND h_options;
+        CreateWindowEx(
+        0,
+        "STATIC",          // <-- this is the label
+        "Value:",          // <-- text to display
+        WS_VISIBLE | WS_CHILD,
+        520,85,220,25,
+        Parent,
+        NULL,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    h_options =CreateWindowEx(
+        WS_EX_CLIENTEDGE,
+        "EDIT",
+        "",
+        WS_BORDER|WS_CHILD|WS_VISIBLE,
+        520,100,300,20,
+        Parent,
+        NULL,
+        GetModuleHandle(NULL),
+        NULL);
+    return h_options;
+}
 //add pid serach
 //add memory addition
 HWND CREATE_BOTTOM_LIST(HWND PARENT){
     HWND hlist_bottom;
-    INITCOMMONCONTROLSEX icex ={0};
-    icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
-    icex.dwICC = ICC_LISTVIEW_CLASSES;
     hlist_bottom = CreateWindowEx(
             WS_EX_CLIENTEDGE,
             WC_LISTVIEW,
@@ -21,7 +144,7 @@ HWND CREATE_BOTTOM_LIST(HWND PARENT){
             GetModuleHandle(NULL),
             NULL
             );
-      // Add column
+    // Add column
     LVCOLUMN col;
     col.mask = LVCF_TEXT | LVCF_WIDTH;
     col.cx = 200;
@@ -50,18 +173,13 @@ HWND CREATE_BOTTOM_LIST(HWND PARENT){
 
 }
 HWND CREATE_LIST(HWND PARENT,process_arr *array){
-
         HWND hList;
-        INITCOMMONCONTROLSEX icex = {0};
-        icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
-        icex.dwICC = ICC_LISTVIEW_CLASSES;
-        InitCommonControlsEx(&icex);
         // Create ListView
         hList = CreateWindowEx(
             WS_EX_CLIENTEDGE,
             WC_LISTVIEW,
             "",
-            WS_CHILD | WS_VISIBLE | LVS_REPORT,
+            WS_VISIBLE | LVS_REPORT |LVS_AUTOARRANGE,
             20,20,400,300,
             PARENT,
             NULL,
@@ -112,12 +230,17 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             DestroyWindow(hwnd);
             break;
         case WM_CREATE:
+            CREATE_LEFT_SIDE_Table(hwnd);
+            CREATE_BOTTOM_LIST(hwnd);
+            CREATE_SIDE_OPTIONS(hwnd);
+            CREATE_GROUP_BOX(hwnd);
             HMENU hmenu,hsub,hsub2;
             hmenu=CreateMenu();
 
             //create pop up
             hsub=CreatePopupMenu();
-            AppendMenu(hsub,MF_STRING,ID_FILE_EXIT,"Exit");
+            AppendMenu(hsub,MF_STRING,ID_OPEN_PROCESS,"Select process");
+            AppendMenu(hsub,MF_STRING,ID_FILE_EXIT,"exit");
             AppendMenu(hmenu, MF_STRING | MF_POPUP, (UINT_PTR)hsub, "File");
 
             hsub2=CreatePopupMenu();
@@ -132,7 +255,11 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                     PostMessage(hwnd,WM_CLOSE,0,0);
                     break;
                 case ID_HELP_ABOUT:
-                    MessageBox(NULL,"LOL","LOL 2.O",MB_OK|MB_ICONINFORMATION);
+                    MessageBox(NULL,"A work in progress memory hacker","LOL 2.O",MB_OK|MB_ICONINFORMATION);
+                    break;
+                case ID_OPEN_PROCESS:
+                    getproclist();
+                    CREATE_LIST(hwnd,&global_process);
                     break;
             }
             break;
@@ -154,6 +281,10 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
     WNDCLASSEX wc = {0};
     HWND hwnd;
     MSG msg;
+    INITCOMMONCONTROLSEX icex = {0};
+    icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
+    icex.dwICC = ICC_LISTVIEW_CLASSES;
+    InitCommonControlsEx(&icex);
 
     wc.cbSize = sizeof(WNDCLASSEX);
     wc.style = 0;
@@ -173,7 +304,7 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
         return 0;
     }
 
-    hwnd = CreateWindowEx(WS_EX_CLIENTEDGE,"myWindowClass","The title of my window",WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,CW_USEDEFAULT,860,680,NULL,NULL,hInstance,NULL);
+    hwnd = CreateWindowEx(WS_EX_CLIENTEDGE,"myWindowClass","Sucky scan",WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,CW_USEDEFAULT,860,680,NULL,NULL,hInstance,NULL);
 
     if(hwnd == NULL){
         MessageBox(NULL,"Window Creation Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
@@ -183,9 +314,7 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
     ShowWindow(hwnd,nCmdShow);
     UpdateWindow(hwnd);
 
-    getproclist();
-    CREATE_LIST(hwnd,&global_process);
-    CREATE_BOTTOM_LIST(hwnd);
+
     while(GetMessage(&msg,NULL,0,0) > 0){
         TranslateMessage(&msg);
         DispatchMessage(&msg);
