@@ -35,7 +35,7 @@ address_arr init_addr_array(){
 void add_array_address_info(address_arr *arr,address_info *info){
      if(arr->count == arr->capacity){
         size_t new_cap = arr->capacity*=2;
-        process_info *temp;
+        address_info *temp;
         temp=realloc(arr->info,arr->capacity *sizeof(address_info));
         if(!temp){
             fprintf(stderr,"realloc failed");

@@ -9,7 +9,4 @@
 BOOL getproclist();
 BOOL listprocmodules(DWORD dwpid);
 
-
-
-
 #endif

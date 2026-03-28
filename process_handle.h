@@ -1,5 +1,5 @@
-#ifndef PROC_H
-#define PROC_H
+#ifndef PROC_HANDLE_H
+#define PROC_HANDLE_H
 #include<stdio.h>
 #include<stdlib.h>
 #include<windows.h>

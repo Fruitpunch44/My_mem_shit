@@ -1,6 +1,6 @@
 #include "the_windows.h"
-#include"proclist.h"
-#include"process_handle.h"
+
+
 
 /*todo
 add string search function
@@ -106,7 +106,7 @@ HWND CREATE_LEFT_SIDE_Table(HWND PARENT,address_arr *addr_arr){
             item.iItem = (int)i;
             item.iSubItem = 0;
             char buff[43];
-            sprintf(buff,"%llu",addr_arr->info[i].addr);
+            sprintf(buff,"0x%llx",addr_arr->info[i].addr);
             item.pszText = buff;
             ListView_InsertItem(hlist_left_table,&item);
 
@@ -240,6 +240,8 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             DestroyWindow(hwnd);
             break;
         case WM_CREATE:
+            DWORD id= 21384;
+            get_process_id(id);
             CREATE_LEFT_SIDE_Table(hwnd,&global_address_info);
             CREATE_BOTTOM_LIST(hwnd);
             CREATE_SIDE_OPTIONS(hwnd);
@@ -320,8 +322,7 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
         MessageBox(NULL,"Window Creation Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
         return 0;
     }
-    DWORD id= 7136;
-    get_process_id(id);
+  
     ShowWindow(hwnd,nCmdShow);
     UpdateWindow(hwnd);
     while(GetMessage(&msg,NULL,0,0) > 0){

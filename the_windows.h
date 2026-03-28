@@ -2,10 +2,12 @@
 #include<stdlib.h>
 #include<commctrl.h>
 #include <tlhelp32.h>
-#include"process_array.h"
-
 #pragma comment(lib, "comctl32.lib")
 #define IDR_MYMENU 101
+
+#include"process_array.h"
+#include"process_handle.h"
+#include"proclist.h"
 
 HWND CREATE_LIST(HWND PARENT,process_arr *array);
 HWND CREATE_BOTTOM_LIST(HWND PARENT);
