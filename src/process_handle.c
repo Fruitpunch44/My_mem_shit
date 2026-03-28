@@ -1,5 +1,5 @@
-#include"process_handle.h"
-#include"process_array.h"
+#include "process_handle.h"
+#include "process_array.h"
 
 // void write_memory(HANDLE process, BYTE *address,BYTE value);
 
