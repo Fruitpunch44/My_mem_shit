@@ -1,7 +1,6 @@
 #ifndef PROC_ARR_H
 #define PROC_ARR_H
 
-
 #include<stdio.h>
 #include<stdlib.h>
 #include<strings.h>
@@ -11,6 +10,7 @@
 typedef struct{
     CHAR *NAME;
     DWORD PID;
+    DWORD Thread;
 }process_info;
 
 

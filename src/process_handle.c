@@ -55,7 +55,10 @@ void get_process_id(DWORD proc_id){
             return ;
         }
 
-        if(mbi.State == MEM_COMMIT && !(mbi.Protect & PAGE_NOACCESS) &&
+        // meomry filter 
+        if(mbi.State == MEM_COMMIT && 
+            ((mbi.Protect & PAGE_READONLY)|| (mbi.Protect & PAGE_READWRITE))  &&
+            !(mbi.Protect & PAGE_NOACCESS) &&
             !(mbi.Protect & PAGE_GUARD)){
                 fprintf(stdout,"Memory region at 0x%p is committed and accessible.\n", (void*)mbi.BaseAddress);
                 read_memory(proc,(unsigned long long)mbi.BaseAddress);

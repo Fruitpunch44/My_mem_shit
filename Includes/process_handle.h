@@ -47,4 +47,4 @@ void get_process_id(DWORD proc_id);
 #endif
 
 /*so this is going over working with undocumented api functions opposed to the normal api call 
-do note that they do both the same thing differnce being that the nt version isn't a wraper and you have to declaring it */
+do note that they do both the same thing differnce being that the nt version isn't a wraper and you have to declare it manually */

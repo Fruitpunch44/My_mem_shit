@@ -49,6 +49,7 @@ BOOL getproclist(){
         fprintf(stdout,"\n");
         info->NAME=_strdup(entry32.szExeFile);
         info->PID=entry32.th32ProcessID;
+        info->Thread=entry32.cntThreads;
         add_array(&global_process,info);
         listprocmodules(entry32.th32ProcessID);
         free(info);

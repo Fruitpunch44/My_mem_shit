@@ -20,9 +20,9 @@ void add_array(process_arr *arr,process_info *info){
             return;
         }
         arr->entries=temp;
-        arr->capacity =new_cap;
+        arr->capacity = new_cap;
     }
-    arr->entries[arr->count++]=*info;
+    arr->entries[arr->count++]= *info;
 }
 
 address_arr init_addr_array(){

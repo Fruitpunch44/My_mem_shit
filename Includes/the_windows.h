@@ -3,6 +3,7 @@
 #include<commctrl.h>
 #include <tlhelp32.h>
 #pragma comment(lib, "comctl32.lib")
+
 #define IDR_MYMENU 101
 
 #include"process_array.h"
@@ -17,4 +18,5 @@ HWND CREATE_LEFT_SIDE_Table(HWND PARENT,address_arr *addr_arr);
 #define ID_FILE_EXIT 60001
 #define ID_HELP_ABOUT 60002
 #define ID_OPEN_PROCESS 60003
+#define ID_SELECT 60004 //BUTTON
 
