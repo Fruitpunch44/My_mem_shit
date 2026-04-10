@@ -4,12 +4,34 @@ do
 add string search function
 create a singular group box for the options
 find away to use wm_notify to select the process from the process list*/ 
+
+HWND hList;//global handle for the process list to be able to
+
 LRESULT CALLBACK ProcessProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
     switch(msg){
         case WM_CLOSE:
         DestroyWindow(hwnd);
         break;
+        case WM_COMMAND:
+            //CONTROL CODE IS LOWRD NOTIFICATION CODE IS HIWORD
+            if(LOWORD(wparam)==ID_SELECT && HIWORD(wparam)==BN_CLICKED){
+                char pid_buff[50];
+                int pos =ListView_GetNextItem(hList,-1,LVNI_SELECTED);
+                if(pos == -1){
+                    MessageBox(hwnd, "No process selected", "Error", MB_OK);
+                    break;
+                }
+                int pid_column =1;
+                ListView_GetItemText(hList,pos,pid_column,pid_buff,sizeof(pid_buff));
+                int pid = atoi(pid_buff);
 
+                if(pid == 0){
+                MessageBox(hwnd, "Invalid PID", "Error", MB_OK);
+                break;
+                }
+                    get_process_id(pid);    
+            }
+            break;
         default:
             return DefWindowProc(hwnd,msg,wparam,lparam);
     }
@@ -22,8 +44,7 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             DestroyWindow(hwnd);
             break;
         case WM_CREATE:
-            DWORD id= 8900;
-            get_process_id(id);//test for now find a way to get the adress from the list
+            //test for now find a way to get the adress from the list
             CREATE_LEFT_SIDE_Table(hwnd,&global_address_info);
             CREATE_BOTTOM_LIST(hwnd);
             CREATE_SIDE_OPTIONS(hwnd);
@@ -54,9 +75,6 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                 case ID_OPEN_PROCESS:
                     getproclist();
                     CREATE_LIST(hwnd,&global_process);
-                    break;
-                case ID_SELECT:
-                    MessageBox(NULL,"You clicked the select button!","Button Click",MB_OK);
                     break;
             }
             break;
@@ -107,7 +125,7 @@ HWND CREATE_GROUP_BOX(HWND Parent){
         WS_BORDER|WS_CHILD|WS_VISIBLE,
         x_padding,y_padding,100,20,
         group_box,
-        NULL,
+        (HMENU)ID_START_EDIT,
         GetModuleHandle(NULL),
         NULL);
         y_padding +=gap_y;
@@ -132,7 +150,7 @@ HWND CREATE_GROUP_BOX(HWND Parent){
         WS_BORDER|WS_CHILD|WS_VISIBLE,
         x_padding,y_padding,100,20,
         group_box,
-        NULL,
+        (HMENU)ID_STOP_EDIT,
         GetModuleHandle(NULL),
         NULL);
         y_padding+=gap_y;
@@ -143,7 +161,7 @@ HWND CREATE_GROUP_BOX(HWND Parent){
     WS_CHILD|BS_CHECKBOX|WS_VISIBLE,
     x_padding,y_padding,100,20,
     group_box,
-    NULL,
+    (HMENU)ID_WRITEABLE_CHECK,
     GetModuleHandle(NULL),
     NULL
     );
@@ -162,6 +180,7 @@ HWND CREATE_LEFT_SIDE_Table(HWND PARENT,address_arr *addr_arr){
             GetModuleHandle(NULL),
             NULL
             );
+            
     LVCOLUMN col;
     col.mask = LVCF_TEXT | LVCF_WIDTH;
     col.cx = 200;
@@ -191,6 +210,7 @@ HWND CREATE_LEFT_SIDE_Table(HWND PARENT,address_arr *addr_arr){
             ListView_InsertItem(hlist_left_table,&item);
 
     }
+    return hlist_left_table;
 }
         
 HWND CREATE_SIDE_OPTIONS(HWND Parent){
@@ -217,7 +237,7 @@ HWND CREATE_SIDE_OPTIONS(HWND Parent){
         WS_BORDER|WS_CHILD|WS_VISIBLE,
         520,y_padding,300,20,
         Parent,
-        NULL,
+        (HMENU)ID_EDIT_VALUE,
         GetModuleHandle(NULL),
         NULL);
     return h_options;
@@ -266,21 +286,8 @@ HWND CREATE_BOTTOM_LIST(HWND PARENT){
 
 }
 HWND CREATE_LIST(HWND PARENT,process_arr *array){ 
-        WNDCLASSEX wc = {0};
         HWND hlist_main;
-        HWND hList;
         HWND button;
-        wc.cbSize=sizeof(WNDCLASSEX);
-        wc.lpfnWndProc =ProcessProc;
-        wc.hInstance=GetModuleHandle(NULL);
-        wc.lpszClassName="ProcessListWindow";
-        if(!RegisterClassEx(&wc)){
-            char err_mess[50];
-            DWORD err= GetLastError();
-            MessageBox(NULL,"Window Registration Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
-            snprintf(err_mess,sizeof(err_mess),"%d",err);
-            MessageBox(NULL,err_mess,"error code",MB_ICONEXCLAMATION|MB_OK); 
-        }
         //create main window for list
         hlist_main = CreateWindowEx(WS_EX_CLIENTEDGE,
             "ProcessListWindow",
@@ -299,7 +306,7 @@ HWND CREATE_LIST(HWND PARENT,process_arr *array){
         WS_VISIBLE|WS_CHILD|WS_TABSTOP|BS_PUSHBUTTON|BS_CENTER,
         380,470,80,20,
         hlist_main,
-        NULL,
+        (HMENU)ID_SELECT,
         (HINSTANCE)GetWindowLongPtr(hlist_main,GWLP_HINSTANCE),
         NULL);
         
@@ -363,6 +370,7 @@ HWND CREATE_LIST(HWND PARENT,process_arr *array){
 
 int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow){
     WNDCLASSEX wc = {0};
+    WNDCLASSEX wc2 = {0};
     HWND hwnd;
     MSG msg;
     INITCOMMONCONTROLSEX icex = {0};
@@ -383,9 +391,21 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
     wc.lpszClassName = "myWindowClass";
     wc.hIconSm = LoadIcon(NULL,IDI_APPLICATION);
 
+    wc2.cbSize=sizeof(WNDCLASSEX);
+    wc2.lpfnWndProc =ProcessProc;
+    wc2.hInstance=GetModuleHandle(NULL);
+    wc2.lpszClassName="ProcessListWindow";
+
     if(!RegisterClassEx(&wc)){
         MessageBox(NULL,"Window Registration Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
         return 0;
+    }
+    if(!RegisterClassEx(&wc2)){
+        char err_mess[50];
+        DWORD err= GetLastError();
+        MessageBox(NULL,"Window Registration Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
+        snprintf(err_mess,sizeof(err_mess),"%d",err);
+        MessageBox(NULL,err_mess,"error code",MB_ICONEXCLAMATION|MB_OK); 
     }
 
     hwnd = CreateWindowEx(WS_EX_CLIENTEDGE,"myWindowClass","Sucky scan",WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,CW_USEDEFAULT,860,680,NULL,NULL,hInstance,NULL);
