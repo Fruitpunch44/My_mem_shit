@@ -3,33 +3,47 @@
 do
 add string search function
 create a singular group box for the options
+use wm_notify 
 find away to use wm_notify to select the process from the process list*/ 
 
 HWND hList;//global handle for the process list to be able to
+HWND hlist_left_table;//global handle for list in main window
 
 LRESULT CALLBACK ProcessProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
     switch(msg){
         case WM_CLOSE:
         DestroyWindow(hwnd);
         break;
+
         case WM_COMMAND:
+            MessageBox(NULL, "Command received", "Info", MB_OK);
             //CONTROL CODE IS LOWRD NOTIFICATION CODE IS HIWORD
             if(LOWORD(wparam)==ID_SELECT && HIWORD(wparam)==BN_CLICKED){
+                MessageBox(NULL, "Select button clicked", "Info", MB_OK);
                 char pid_buff[50];
                 int pos =ListView_GetNextItem(hList,-1,LVNI_SELECTED);
                 if(pos == -1){
                     MessageBox(hwnd, "No process selected", "Error", MB_OK);
                     break;
                 }
-                int pid_column =1;
+                int pid_column = 1;
                 ListView_GetItemText(hList,pos,pid_column,pid_buff,sizeof(pid_buff));
                 int pid = atoi(pid_buff);
 
                 if(pid == 0){
                 MessageBox(hwnd, "Invalid PID", "Error", MB_OK);
                 break;
-                }
-                    get_process_id(pid);    
+                }  
+                
+                MessageBox(hwnd, pid_buff, "Selected PID", MB_OK);
+
+                get_process_id(pid);
+                char dbg[100];
+                snprintf(dbg, sizeof(dbg), "Posting WM_REFRESH to: %p", GetParent(hwnd));
+                MessageBox(NULL, dbg, "DEBUG POST", MB_OK);
+                PostMessage(GetParent(hwnd),WM_REFRESH,0,0);//refresh the list after getting the new process info
+                DestroyWindow(hwnd);
+
             }
             break;
         default:
@@ -45,17 +59,19 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             break;
         case WM_CREATE:
             //test for now find a way to get the adress from the list
-            CREATE_LEFT_SIDE_Table(hwnd,&global_address_info);
+
+            CREATE_LEFT_SIDE_Table(hwnd,&global_address_info);//
             CREATE_BOTTOM_LIST(hwnd);
             CREATE_SIDE_OPTIONS(hwnd);
             CREATE_GROUP_BOX(hwnd);
             HMENU hmenu,hsub,hsub2;
             hmenu=CreateMenu();
 
+
             //create pop up
             hsub=CreatePopupMenu();
             AppendMenu(hsub,MF_STRING,ID_OPEN_PROCESS,"Select process");
-            AppendMenu(hsub,MF_STRING,ID_FILE_EXIT,"exit");
+            AppendMenu(hsub,MF_STRING,ID_FILE_EXIT,"Exit");
             AppendMenu(hmenu, MF_STRING | MF_POPUP, (UINT_PTR)hsub, "File");
 
             hsub2=CreatePopupMenu();
@@ -76,6 +92,37 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                     getproclist();
                     CREATE_LIST(hwnd,&global_process);
                     break;
+            }
+            break;
+        case WM_REFRESH:
+            //this is not being called after the post message for some reason
+            //the issue was due to the process window being an overlappedwindow 
+            MessageBox(NULL, "WM_REFRESH received", "DEBUG", MB_OK);
+            ListView_DeleteAllItems(hlist_left_table);
+            if(global_address_info.count == 0){
+                MessageBox(hwnd,"no readable memory found","info",MB_OK);
+                break;
+            }
+            else{
+                 MessageBox(hwnd,"refreshing list","info",MB_OK);
+            }
+            for(size_t i =0 ; i<global_address_info.count;i++){
+                LVITEM item;
+                item.mask = LVIF_TEXT;
+                item.iItem = i;
+                item.iSubItem = 0;
+                char addr_buff[43];
+                sprintf(addr_buff,"0x%llx",global_address_info.info[i].addr);
+                item.pszText = addr_buff;
+                ListView_InsertItem(hlist_left_table,&item);
+
+                char value[64];
+                snprintf(value,sizeof(value),"%d",global_address_info.info[i].value);
+                ListView_SetItemText(hlist_left_table,i,1,value);
+
+                char prev[64];
+                snprintf(prev,sizeof(prev),"%d",global_address_info.info[i].previous);
+                ListView_SetItemText(hlist_left_table,i,2,prev);
             }
             break;
         case WM_DESTROY:
@@ -168,7 +215,6 @@ HWND CREATE_GROUP_BOX(HWND Parent){
     return group_box;
 }
 HWND CREATE_LEFT_SIDE_Table(HWND PARENT,address_arr *addr_arr){
-    HWND hlist_left_table;
     hlist_left_table = CreateWindowEx(
             WS_EX_CLIENTEDGE,
             WC_LISTVIEW,
@@ -200,15 +246,18 @@ HWND CREATE_LEFT_SIDE_Table(HWND PARENT,address_arr *addr_arr){
     ListView_InsertColumn(hlist_left_table,2,&col3);
 
      for(size_t i =0 ; i<addr_arr->count;i++){
-            LVITEM item;
+            LVITEM item = {0};
             item.mask = LVIF_TEXT;
             item.iItem = (int)i;
             item.iSubItem = 0;
-            char buff[43];
+            static char buff[43];
             sprintf(buff,"0x%llx",addr_arr->info[i].addr);
             item.pszText = buff;
             ListView_InsertItem(hlist_left_table,&item);
 
+            /*char value[64];
+            snprintf(value,sizeof(value),"%d",addr_arr->info[i].values);
+            ListView_SetItemText(hlist_left_table,i,1,value);*/  
     }
     return hlist_left_table;
 }
@@ -286,13 +335,14 @@ HWND CREATE_BOTTOM_LIST(HWND PARENT){
 
 }
 HWND CREATE_LIST(HWND PARENT,process_arr *array){ 
+        //when posting to a parent window avoid using WS_OVERLAPPEDWINDOW
         HWND hlist_main;
         HWND button;
         //create main window for list
         hlist_main = CreateWindowEx(WS_EX_CLIENTEDGE,
             "ProcessListWindow",
             "test",
-            WS_VISIBLE|WS_OVERLAPPEDWINDOW,
+            WS_VISIBLE|WS_POPUPWINDOW|WS_CAPTION|WS_SYSMENU,
             20,20,500,600,
             PARENT,
             NULL,
@@ -316,7 +366,7 @@ HWND CREATE_LIST(HWND PARENT,process_arr *array){
             WS_EX_CLIENTEDGE,
             WC_LISTVIEW,
             "Processes",
-            WS_VISIBLE |WS_CHILD| LVS_REPORT |LVS_AUTOARRANGE,
+            WS_VISIBLE |WS_CHILD| LVS_REPORT |LVS_AUTOARRANGE|LVS_SINGLESEL,
             20,20,350,500,
             hlist_main,
             NULL,
@@ -346,7 +396,7 @@ HWND CREATE_LIST(HWND PARENT,process_arr *array){
 
             // Add row
             for(size_t i =0 ; i<array->count;i++){
-            LVITEM item;
+            LVITEM item = {0};
             item.mask = LVIF_TEXT;
             item.iItem = (int)i;
             item.iSubItem = 0;
@@ -391,10 +441,13 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
     wc.lpszClassName = "myWindowClass";
     wc.hIconSm = LoadIcon(NULL,IDI_APPLICATION);
 
+    //process list window class
     wc2.cbSize=sizeof(WNDCLASSEX);
     wc2.lpfnWndProc =ProcessProc;
     wc2.hInstance=GetModuleHandle(NULL);
     wc2.lpszClassName="ProcessListWindow";
+    wc2.hCursor = LoadCursor(NULL,IDC_ARROW);
+    wc2.hbrBackground = (HBRUSH)(COLOR_WINDOW+1);
 
     if(!RegisterClassEx(&wc)){
         MessageBox(NULL,"Window Registration Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);

@@ -16,6 +16,8 @@ typedef struct{
 
 typedef struct{
     unsigned long long addr;
+    unsigned int value;//giving me negative values not meant to be
+    unsigned int previous;//
 }address_info;
 
 typedef struct{

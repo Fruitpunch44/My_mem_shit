@@ -4,7 +4,7 @@
 #include<stdlib.h>
 #include<windows.h>
 #include<winternl.h>
-#define BUFF_SIZE 206
+#define BUFF_SIZE 1024
 
 typedef enum _MEMORY_INFORMATION_CLASS
 {
@@ -39,7 +39,7 @@ typedef NTSTATUS(NTAPI *pNtQueryVirtualMemory)(
 //void string_search(char *string_to_find);
 
 
-void read_memory(HANDLE proc,unsigned long long addr);
+unsigned int read_memory(HANDLE proc,unsigned long long addr);
 void get_process_id(DWORD proc_id);
 
 
