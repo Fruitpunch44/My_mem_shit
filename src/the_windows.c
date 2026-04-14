@@ -8,6 +8,7 @@ find away to use wm_notify to select the process from the process list*/
 
 HWND hList;//global handle for the process list to be able to
 HWND hlist_left_table;//global handle for list in main window
+HWND group_box;//global handle for group box
 
 LRESULT CALLBACK ProcessProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
     switch(msg){
@@ -37,7 +38,7 @@ LRESULT CALLBACK ProcessProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                 
                 MessageBox(hwnd, pid_buff, "Selected PID", MB_OK);
 
-                get_process_id(pid);
+                get_process_id(pid,0);//for now just scan everything
                 char dbg[100];
                 snprintf(dbg, sizeof(dbg), "Posting WM_REFRESH to: %p", GetParent(hwnd));
                 MessageBox(NULL, dbg, "DEBUG POST", MB_OK);
@@ -64,6 +65,7 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             CREATE_BOTTOM_LIST(hwnd);
             CREATE_SIDE_OPTIONS(hwnd);
             CREATE_GROUP_BOX(hwnd);
+            CREATE_SCAN(hwnd);
             HMENU hmenu,hsub,hsub2;
             hmenu=CreateMenu();
 
@@ -82,6 +84,7 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             break;
         case WM_COMMAND:
             switch(LOWORD(wparam)){
+                //implement range selection scan
                 case ID_FILE_EXIT:
                     PostMessage(hwnd,WM_CLOSE,0,0);
                     break;
@@ -92,6 +95,10 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                     getproclist();
                     CREATE_LIST(hwnd,&global_process);
                     break;
+                case ID_SCAN_BUTTON:
+                    if(HIWORD(wparam)==BN_CLICKED){
+                        MessageBeep(MB_ICONSTOP);
+                    }
             }
             break;
         case WM_REFRESH:
@@ -137,8 +144,29 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
     return 0;
 }
 
+void handle_address_range(){
+    char start_address_buff[124];
+    char end_address_buff[124];
+    GetDlgItem(group_box,ID_GROUP_BOX);
+    GetDlgItemText(group_box,ID_START_EDIT,start_address_buff,sizeof(start_address_buff));
+    GetDlgItemText(group_box,ID_STOP_EDIT,end_address_buff,sizeof(end_address_buff));
+    unsigned long long start_address =strtoull(start_address_buff,NULL,16);
+    unsigned long long end_address =strtoull(end_address_buff,NULL,16);
+
+}
+HWND CREATE_SCAN(HWND Parent){
+    HWND scan_button;
+    scan_button=CreateWindowEx(WS_EX_WINDOWEDGE,
+    "BUTTON",
+    "SCAN",
+    BS_PUSHBUTTON|WS_VISIBLE|WS_CHILD,
+    520,30,100,20,
+    Parent,(HMENU)ID_SCAN_BUTTON,
+    GetModuleHandle(NULL),
+    NULL);
+    return scan_button;
+    }
 HWND CREATE_GROUP_BOX(HWND Parent){
-    HWND group_box;
     int x_padding = 20;
     int y_padding = 40;
     int gap_y = 20;
@@ -148,19 +176,19 @@ HWND CREATE_GROUP_BOX(HWND Parent){
     "BUTTON",
     "Mem scan options",
     BS_GROUPBOX |WS_VISIBLE|WS_CHILD,
-    520,110,270,210,
+    520,130,270,210,
     Parent,
     NULL,
     GetModuleHandle(NULL),
     NULL);
     CreateWindowEx(
         0,
-        "STATIC",          // <-- this is the label
-        "Start:",          // <-- text to display
+        "STATIC",          // this is the label
+        "Start:",          // text to display
         WS_VISIBLE | WS_CHILD,
         x_padding,y_padding,100,25,
         group_box,
-        NULL,
+        (HMENU)ID_GROUP_BOX,
         GetModuleHandle(NULL),
         NULL
     );
@@ -180,8 +208,8 @@ HWND CREATE_GROUP_BOX(HWND Parent){
 
     CreateWindowEx(
         0,
-        "STATIC",          // <-- this is the label
-        "Stop:",          // <-- text to display
+        "STATIC",          //this is the label
+        "Stop:",          //text to display
         WS_VISIBLE | WS_CHILD,
         x_padding,y_padding,100,25,
         group_box,
@@ -220,7 +248,7 @@ HWND CREATE_LEFT_SIDE_Table(HWND PARENT,address_arr *addr_arr){
             WC_LISTVIEW,
             "",
             WS_CHILD | WS_VISIBLE | LVS_REPORT,
-            20,20,400,300,
+            20,40,400,300,
             PARENT,
             NULL,
             GetModuleHandle(NULL),
@@ -264,7 +292,7 @@ HWND CREATE_LEFT_SIDE_Table(HWND PARENT,address_arr *addr_arr){
         
 HWND CREATE_SIDE_OPTIONS(HWND Parent){
     HWND h_options;
-    int y_padding =35;
+    int y_padding =65;
     int gap_y =25;
         CreateWindowEx(
         0,
@@ -300,7 +328,7 @@ HWND CREATE_BOTTOM_LIST(HWND PARENT){
             WC_LISTVIEW,
             "",
             WS_CHILD | WS_VISIBLE | LVS_REPORT,
-            20,370,800,200,
+            20,390,800,200,
             PARENT,
             NULL,
             GetModuleHandle(NULL),

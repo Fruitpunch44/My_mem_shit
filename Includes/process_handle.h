@@ -40,7 +40,7 @@ typedef NTSTATUS(NTAPI *pNtQueryVirtualMemory)(
 
 
 unsigned int read_memory(HANDLE proc,unsigned long long addr);
-void get_process_id(DWORD proc_id);
+void get_process_id(DWORD proc_id,unsigned long long start);
 
 
 

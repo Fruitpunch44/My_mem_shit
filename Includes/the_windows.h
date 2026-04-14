@@ -15,6 +15,7 @@ HWND CREATE_BOTTOM_LIST(HWND PARENT);
 HWND CREATE_SIDE_OPTIONS(HWND Parent);
 HWND CREATE_GROUP_BOX(HWND Parent);
 HWND CREATE_LEFT_SIDE_Table(HWND PARENT,address_arr *addr_arr);
+HWND CREATE_SCAN(HWND Parent);
 
 //objects within the window
 #define WM_REFRESH (WM_USER+1) // handle this for refreshing the list after a scan
@@ -26,4 +27,6 @@ HWND CREATE_LEFT_SIDE_Table(HWND PARENT,address_arr *addr_arr);
 #define ID_START_EDIT 60006 //START FIELD
 #define ID_STOP_EDIT 60007 //STOP FIELD
 #define ID_WRITEABLE_CHECK 60008 //CHECKBOX
+#define ID_GROUP_BOX 60009 
+#define ID_SCAN_BUTTON 60010
 

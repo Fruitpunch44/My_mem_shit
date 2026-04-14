@@ -36,15 +36,15 @@ unsigned int read_memory(HANDLE proc,unsigned long long addr){
     return *buff;
 }
 
-void get_range_address(HANDLE proc,unsigned long long start_addr,unsigned long long end_address);
-void get_process_id(DWORD proc_id){
+void scan_memory(DWORD proc_id,unsigned long long start_address,unsigned long long end_address){
     global_address_info = init_addr_array();
     HANDLE proc;
     MEMORY_BASIC_INFORMATION mbi ={0};
-    unsigned long long base_addr = 0;
+    unsigned long long base_addr = start_address;
+    unsigned long long end_addr = end_address;
     proc= OpenProcess(PROCESS_QUERY_INFORMATION |PROCESS_VM_READ,FALSE,proc_id);
 
-    if(proc== NULL){
+     if(proc== NULL){
         fprintf(stderr,"unable to open process \n pls pass in a valid pid %s",strerror(GetLastError()));
         return;
     }
@@ -59,11 +59,7 @@ void get_process_id(DWORD proc_id){
     }
     NTSTATUS status = NtQueryVirtualMemory(proc,(LPVOID)base_addr,MemoryBasicInformation,&mbi,sizeof(mbi),0);
 
-    
-    //the whole idea of virtual query is to the get the memmory info of process and check it's various states
-    //then u can now use read process memory to read the data of the process 
-    //note that ntstatus only returns a code to signifiy it's success with the api call
-    while(NT_SUCCESS(status)){
+    while(NT_SUCCESS(status) && base_addr < end_addr){
         address_info *info = malloc(sizeof(address_info));
         if(!info){
             fprintf(stderr,"error in mem alloc");
@@ -86,5 +82,12 @@ void get_process_id(DWORD proc_id){
             status = NtQueryVirtualMemory(proc, (LPVOID)base_addr, MemoryBasicInformation, &mbi, sizeof(mbi), NULL);
             //note to self do not call outside of a loop to prevent crashes 
         }
-    CloseHandle(proc);
+        CloseHandle(proc);
+}
+
+
+//scan from 0 to max
+void get_process_id(DWORD proc_id,unsigned long long start){
+    unsigned long long end =0xffffffffffffffff;
+    scan_memory(proc_id,start,end);
 }
