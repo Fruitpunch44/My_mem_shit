@@ -1,14 +1,17 @@
 #include "the_windows.h"
-/*to
-do
+/*todo
 add string search function
-create a singular group box for the options
-use wm_notify 
-find away to use wm_notify to select the process from the process list*/ 
+use wm_notify later
+add better filtering
+add write modifications
+*/ 
 
 HWND hList;//global handle for the process list to be able to
 HWND hlist_left_table;//global handle for list in main window
 HWND group_box;//global handle for group box
+int pid;//make pid global
+char info_buff[200];//
+HWND info;
 
 LRESULT CALLBACK ProcessProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
     switch(msg){
@@ -17,31 +20,38 @@ LRESULT CALLBACK ProcessProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
         break;
 
         case WM_COMMAND:
-            MessageBox(NULL, "Command received", "Info", MB_OK);
+            MessageBox(NULL, "Command received", "Info", MB_OK);//debuging
             //CONTROL CODE IS LOWRD NOTIFICATION CODE IS HIWORD
             if(LOWORD(wparam)==ID_SELECT && HIWORD(wparam)==BN_CLICKED){
-                MessageBox(NULL, "Select button clicked", "Info", MB_OK);
+
+                MessageBox(NULL, "Select button clicked", "Info", MB_OK);//debuging
                 char pid_buff[50];
+                char name_buff[120];
                 int pos =ListView_GetNextItem(hList,-1,LVNI_SELECTED);
                 if(pos == -1){
                     MessageBox(hwnd, "No process selected", "Error", MB_OK);
                     break;
                 }
                 int pid_column = 1;
-                ListView_GetItemText(hList,pos,pid_column,pid_buff,sizeof(pid_buff));
-                int pid = atoi(pid_buff);
+                int name_colunm =0;
 
+                ListView_GetItemText(hList,pos,pid_column,pid_buff,sizeof(pid_buff));
+                pid = atoi(pid_buff);
                 if(pid == 0){
                 MessageBox(hwnd, "Invalid PID", "Error", MB_OK);
                 break;
                 }  
-                
-                MessageBox(hwnd, pid_buff, "Selected PID", MB_OK);
+
+                ListView_GetItemText(hList,pos,name_colunm,name_buff,sizeof(name_buff));
+
+                MessageBox(hwnd, name_buff, "Select process name", MB_OK);//debuging
+                MessageBox(hwnd, pid_buff, "Selected PID", MB_OK);//debuging
+                snprintf(info_buff,sizeof(info_buff),"%s - %d",name_buff,pid);
 
                 get_process_id(pid,0);//for now just scan everything
                 char dbg[100];
-                snprintf(dbg, sizeof(dbg), "Posting WM_REFRESH to: %p", GetParent(hwnd));
-                MessageBox(NULL, dbg, "DEBUG POST", MB_OK);
+                snprintf(dbg, sizeof(dbg), "Posting WM_REFRESH to: %p", GetParent(hwnd));//debugging
+                MessageBox(NULL, dbg, "DEBUG POST", MB_OK);//debugging
                 PostMessage(GetParent(hwnd),WM_REFRESH,0,0);//refresh the list after getting the new process info
                 DestroyWindow(hwnd);
 
@@ -66,6 +76,7 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             CREATE_SIDE_OPTIONS(hwnd);
             CREATE_GROUP_BOX(hwnd);
             CREATE_SCAN(hwnd);
+            show_selected_process(hwnd);
             HMENU hmenu,hsub,hsub2;
             hmenu=CreateMenu();
 
@@ -97,46 +108,21 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                     break;
                 case ID_SCAN_BUTTON:
                     if(HIWORD(wparam)==BN_CLICKED){
-                        MessageBeep(MB_ICONSTOP);
+                        MessageBeep(MB_ICONINFORMATION);
+                        handle_address_range();
+                        refresh_left_table(hwnd);
+
                     }
             }
             break;
         case WM_REFRESH:
             //this is not being called after the post message for some reason
             //the issue was due to the process window being an overlappedwindow 
-            MessageBox(NULL, "WM_REFRESH received", "DEBUG", MB_OK);
-            ListView_DeleteAllItems(hlist_left_table);
-            if(global_address_info.count == 0){
-                MessageBox(hwnd,"no readable memory found","info",MB_OK);
-                break;
-            }
-            else{
-                 MessageBox(hwnd,"refreshing list","info",MB_OK);
-            }
-            for(size_t i =0 ; i<global_address_info.count;i++){
-                LVITEM item;
-                item.mask = LVIF_TEXT;
-                item.iItem = i;
-                item.iSubItem = 0;
-                char addr_buff[43];
-                sprintf(addr_buff,"0x%llx",global_address_info.info[i].addr);
-                item.pszText = addr_buff;
-                ListView_InsertItem(hlist_left_table,&item);
-
-                char value[64];
-                snprintf(value,sizeof(value),"%d",global_address_info.info[i].value);
-                ListView_SetItemText(hlist_left_table,i,1,value);
-
-                char prev[64];
-                snprintf(prev,sizeof(prev),"%d",global_address_info.info[i].previous);
-                ListView_SetItemText(hlist_left_table,i,2,prev);
-            }
+            refresh_left_table(hwnd);
+            SetWindowText(info, info_buff);
             break;
         case WM_DESTROY:
             PostQuitMessage(0);
-            break;
-        case WM_LBUTTONDOWN:
-            MessageBox(hwnd,"You clicked the left mouse button!","Mouse Click",MB_OK);
             break;
         default:
             return DefWindowProc(hwnd,msg,wparam,lparam);
@@ -152,6 +138,7 @@ void handle_address_range(){
     GetDlgItemText(group_box,ID_STOP_EDIT,end_address_buff,sizeof(end_address_buff));
     unsigned long long start_address =strtoull(start_address_buff,NULL,16);
     unsigned long long end_address =strtoull(end_address_buff,NULL,16);
+    scan_memory((DWORD)pid,start_address,end_address);
 
 }
 HWND CREATE_SCAN(HWND Parent){
@@ -443,8 +430,50 @@ HWND CREATE_LIST(HWND PARENT,process_arr *array){
 
     return hList;
 }
+HWND show_selected_process(HWND Parent){
+        int x_padding = 20;
+        int y_padding = 10;
+        info= CreateWindowEx(WS_EX_CLIENTEDGE,
+        "STATIC",
+        info_buff,
+        WS_CHILD|WS_VISIBLE,
+        x_padding,y_padding,280,20,
+        Parent,
+        NULL,
+        GetModuleHandle(NULL),
+        NULL);
+        return info;
+}
 
+void refresh_left_table(HWND hwnd){
+        MessageBox(NULL, "WM_REFRESH received", "DEBUG", MB_OK);
+            ListView_DeleteAllItems(hlist_left_table);
+            if(global_address_info.count == 0){
+                MessageBox(hwnd,"no readable memory found","info",MB_OK);
+                return;
+            }
+            else{
+                 MessageBox(hwnd,"refreshing list","info",MB_OK);
+            }
+            for(size_t i =0 ; i<global_address_info.count;i++){
+                LVITEM item;
+                item.mask = LVIF_TEXT;
+                item.iItem = i;
+                item.iSubItem = 0;
+                char addr_buff[43];
+                sprintf(addr_buff,"0x%llx",global_address_info.info[i].addr);
+                item.pszText = addr_buff;
+                ListView_InsertItem(hlist_left_table,&item);
 
+                char value[64];
+                snprintf(value,sizeof(value),"%d",global_address_info.info[i].value);
+                ListView_SetItemText(hlist_left_table,i,1,value);
+
+                char prev[64];
+                snprintf(prev,sizeof(prev),"%d",global_address_info.info[i].previous);
+                ListView_SetItemText(hlist_left_table,i,2,prev);
+        }
+}
 
 int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow){
     WNDCLASSEX wc = {0};

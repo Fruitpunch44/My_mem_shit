@@ -14,8 +14,11 @@ HWND CREATE_LIST(HWND PARENT,process_arr *array);
 HWND CREATE_BOTTOM_LIST(HWND PARENT);
 HWND CREATE_SIDE_OPTIONS(HWND Parent);
 HWND CREATE_GROUP_BOX(HWND Parent);
-HWND CREATE_LEFT_SIDE_Table(HWND PARENT,address_arr *addr_arr);
+HWND CREATE_LEFT_SIDE_Table(HWND Parent,address_arr *addr_arr);
 HWND CREATE_SCAN(HWND Parent);
+void handle_address_range();
+void refresh_left_table(HWND Parent);
+HWND show_selected_process(HWND Parent);
 
 //objects within the window
 #define WM_REFRESH (WM_USER+1) // handle this for refreshing the list after a scan
