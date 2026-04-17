@@ -5,13 +5,7 @@ use wm_notify later
 add better filtering
 add write modifications
 */ 
-
-HWND hList;//global handle for the process list to be able to
-HWND hlist_left_table;//global handle for list in main window
-HWND group_box;//global handle for group box
-int pid;//make pid global
-char info_buff[200];//
-HWND info;
+global_window_states gwin;
 
 LRESULT CALLBACK ProcessProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
     switch(msg){
@@ -27,7 +21,7 @@ LRESULT CALLBACK ProcessProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                 MessageBox(NULL, "Select button clicked", "Info", MB_OK);//debuging
                 char pid_buff[50];
                 char name_buff[120];
-                int pos =ListView_GetNextItem(hList,-1,LVNI_SELECTED);
+                int pos =ListView_GetNextItem(gwin.hList,-1,LVNI_SELECTED);
                 if(pos == -1){
                     MessageBox(hwnd, "No process selected", "Error", MB_OK);
                     break;
@@ -35,24 +29,27 @@ LRESULT CALLBACK ProcessProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                 int pid_column = 1;
                 int name_colunm =0;
 
-                ListView_GetItemText(hList,pos,pid_column,pid_buff,sizeof(pid_buff));
-                pid = atoi(pid_buff);
-                if(pid == 0){
+                ListView_GetItemText(gwin.hList,pos,pid_column,pid_buff,sizeof(pid_buff));
+                gwin.pid = atoi(pid_buff);
+                if(gwin.pid == 0){
                 MessageBox(hwnd, "Invalid PID", "Error", MB_OK);
                 break;
                 }  
 
-                ListView_GetItemText(hList,pos,name_colunm,name_buff,sizeof(name_buff));
+                ListView_GetItemText(gwin.hList,pos,name_colunm,name_buff,sizeof(name_buff));
 
                 MessageBox(hwnd, name_buff, "Select process name", MB_OK);//debuging
                 MessageBox(hwnd, pid_buff, "Selected PID", MB_OK);//debuging
-                snprintf(info_buff,sizeof(info_buff),"%s - %d",name_buff,pid);
+                snprintf(gwin.info_buff,sizeof(gwin.info_buff),"%s - %d",name_buff,gwin.pid);
 
-                get_process_id(pid,0);//for now just scan everything
+                get_process_id(gwin.pid,0);//for now just scan everything
                 char dbg[100];
                 snprintf(dbg, sizeof(dbg), "Posting WM_REFRESH to: %p", GetParent(hwnd));//debugging
                 MessageBox(NULL, dbg, "DEBUG POST", MB_OK);//debugging
-                PostMessage(GetParent(hwnd),WM_REFRESH,0,0);//refresh the list after getting the new process info
+                PostMessage(GetParent(hwnd),WM_REFRESH,0,0);
+                char addr_count[50];
+                snprintf(addr_count,sizeof(addr_count),"Address count: %zu",global_address_info.count);
+                MessageBox(NULL,addr_count,"DEBUG",MB_OK);
                 DestroyWindow(hwnd);
 
             }
@@ -70,12 +67,12 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             break;
         case WM_CREATE:
             //test for now find a way to get the adress from the list
-
             CREATE_LEFT_SIDE_Table(hwnd,&global_address_info);//
             CREATE_BOTTOM_LIST(hwnd);
             CREATE_SIDE_OPTIONS(hwnd);
             CREATE_GROUP_BOX(hwnd);
             CREATE_SCAN(hwnd);
+            NEXT_SCAN(hwnd);
             show_selected_process(hwnd);
             HMENU hmenu,hsub,hsub2;
             hmenu=CreateMenu();
@@ -109,17 +106,22 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                 case ID_SCAN_BUTTON:
                     if(HIWORD(wparam)==BN_CLICKED){
                         MessageBeep(MB_ICONINFORMATION);
+                        refresh_left_table(hwnd);
+                        break;
+                    }
+                case ID_NEXT_SCAN_BUTTON:
+                    if(HIWORD(wparam)==BN_CLICKED){
+                        MessageBeep(MB_ICONINFORMATION);
                         handle_address_range();
                         refresh_left_table(hwnd);
-
+                        break;
                     }
             }
             break;
         case WM_REFRESH:
             //this is not being called after the post message for some reason
             //the issue was due to the process window being an overlappedwindow 
-            refresh_left_table(hwnd);
-            SetWindowText(info, info_buff);
+            SetWindowText(gwin.info, gwin.info_buff);
             break;
         case WM_DESTROY:
             PostQuitMessage(0);
@@ -133,19 +135,21 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
 void handle_address_range(){
     char start_address_buff[124];
     char end_address_buff[124];
-    GetDlgItem(group_box,ID_GROUP_BOX);
-    GetDlgItemText(group_box,ID_START_EDIT,start_address_buff,sizeof(start_address_buff));
-    GetDlgItemText(group_box,ID_STOP_EDIT,end_address_buff,sizeof(end_address_buff));
+    char pid_dgb[50];
+    snprintf(pid_dgb,sizeof(pid_dgb),"PID: %d",gwin.pid);
+    GetDlgItem(gwin.group_box,ID_GROUP_BOX);
+    GetDlgItemText(gwin.group_box,ID_START_EDIT,start_address_buff,sizeof(start_address_buff));
+    GetDlgItemText(gwin.group_box,ID_STOP_EDIT,end_address_buff,sizeof(end_address_buff));
     unsigned long long start_address =strtoull(start_address_buff,NULL,16);
     unsigned long long end_address =strtoull(end_address_buff,NULL,16);
-    scan_memory((DWORD)pid,start_address,end_address);
+    scan_memory((DWORD)gwin.pid,start_address,end_address);
 
 }
 HWND CREATE_SCAN(HWND Parent){
     HWND scan_button;
     scan_button=CreateWindowEx(WS_EX_WINDOWEDGE,
     "BUTTON",
-    "SCAN",
+    "FIRST SCAN",
     BS_PUSHBUTTON|WS_VISIBLE|WS_CHILD,
     520,30,100,20,
     Parent,(HMENU)ID_SCAN_BUTTON,
@@ -153,13 +157,26 @@ HWND CREATE_SCAN(HWND Parent){
     NULL);
     return scan_button;
     }
+HWND NEXT_SCAN(HWND Parent){
+    HWND next_scan_button;
+    next_scan_button=CreateWindowEx(WS_EX_WINDOWEDGE,
+    "BUTTON",
+    "NEXT SCAN",
+    BS_PUSHBUTTON|WS_VISIBLE|WS_CHILD,
+    640,30,100,20,
+    Parent,(HMENU)ID_NEXT_SCAN_BUTTON,
+    GetModuleHandle(NULL),
+    NULL);
+
+    return next_scan_button;
+    }
+
 HWND CREATE_GROUP_BOX(HWND Parent){
     int x_padding = 20;
     int y_padding = 40;
     int gap_y = 20;
     
-
-    group_box = CreateWindowEx(0,
+    gwin.group_box = CreateWindowEx(0,
     "BUTTON",
     "Mem scan options",
     BS_GROUPBOX |WS_VISIBLE|WS_CHILD,
@@ -174,7 +191,7 @@ HWND CREATE_GROUP_BOX(HWND Parent){
         "Start:",          // text to display
         WS_VISIBLE | WS_CHILD,
         x_padding,y_padding,100,25,
-        group_box,
+        gwin.group_box,
         (HMENU)ID_GROUP_BOX,
         GetModuleHandle(NULL),
         NULL
@@ -186,7 +203,7 @@ HWND CREATE_GROUP_BOX(HWND Parent){
         "",
         WS_BORDER|WS_CHILD|WS_VISIBLE,
         x_padding,y_padding,100,20,
-        group_box,
+        gwin.group_box,
         (HMENU)ID_START_EDIT,
         GetModuleHandle(NULL),
         NULL);
@@ -199,7 +216,7 @@ HWND CREATE_GROUP_BOX(HWND Parent){
         "Stop:",          //text to display
         WS_VISIBLE | WS_CHILD,
         x_padding,y_padding,100,25,
-        group_box,
+        gwin.group_box,
         NULL,
         GetModuleHandle(NULL),
         NULL);
@@ -211,7 +228,7 @@ HWND CREATE_GROUP_BOX(HWND Parent){
         "",
         WS_BORDER|WS_CHILD|WS_VISIBLE,
         x_padding,y_padding,100,20,
-        group_box,
+        gwin.group_box,
         (HMENU)ID_STOP_EDIT,
         GetModuleHandle(NULL),
         NULL);
@@ -222,15 +239,15 @@ HWND CREATE_GROUP_BOX(HWND Parent){
     "WRITEABLE",
     WS_CHILD|BS_CHECKBOX|WS_VISIBLE,
     x_padding,y_padding,100,20,
-    group_box,
+    gwin.group_box,
     (HMENU)ID_WRITEABLE_CHECK,
     GetModuleHandle(NULL),
     NULL
     );
-    return group_box;
+    return gwin.group_box;
 }
 HWND CREATE_LEFT_SIDE_Table(HWND PARENT,address_arr *addr_arr){
-    hlist_left_table = CreateWindowEx(
+    gwin.hlist_left_table = CreateWindowEx(
             WS_EX_CLIENTEDGE,
             WC_LISTVIEW,
             "",
@@ -246,19 +263,19 @@ HWND CREATE_LEFT_SIDE_Table(HWND PARENT,address_arr *addr_arr){
     col.mask = LVCF_TEXT | LVCF_WIDTH;
     col.cx = 200;
     col.pszText = "Address";
-    ListView_InsertColumn(hlist_left_table,0,&col);
+    ListView_InsertColumn(gwin.hlist_left_table,0,&col);
 
     LVCOLUMN col2;
     col2.mask = LVCF_TEXT | LVCF_WIDTH; 
     col2.cx = 200;
     col2.pszText = "Value";
-    ListView_InsertColumn(hlist_left_table,1,&col2);
+    ListView_InsertColumn(gwin.hlist_left_table,1,&col2);
 
     LVCOLUMN col3;
     col3.mask = LVCF_TEXT | LVCF_WIDTH; 
     col3.cx = 200;
     col3.pszText = "Previous";
-    ListView_InsertColumn(hlist_left_table,2,&col3);
+    ListView_InsertColumn(gwin.hlist_left_table,2,&col3);
 
      for(size_t i =0 ; i<addr_arr->count;i++){
             LVITEM item = {0};
@@ -268,13 +285,13 @@ HWND CREATE_LEFT_SIDE_Table(HWND PARENT,address_arr *addr_arr){
             static char buff[43];
             sprintf(buff,"0x%llx",addr_arr->info[i].addr);
             item.pszText = buff;
-            ListView_InsertItem(hlist_left_table,&item);
+            ListView_InsertItem(gwin.hlist_left_table,&item);
 
             /*char value[64];
             snprintf(value,sizeof(value),"%d",addr_arr->info[i].values);
-            ListView_SetItemText(hlist_left_table,i,1,value);*/  
+            ListView_SetItemText(gwin.hlist_left_table,i,1,value);*/  
     }
-    return hlist_left_table;
+    return gwin.hlist_left_table;
 }
         
 HWND CREATE_SIDE_OPTIONS(HWND Parent){
@@ -377,7 +394,7 @@ HWND CREATE_LIST(HWND PARENT,process_arr *array){
         
         
         // Create ListView
-        hList = CreateWindowEx(
+        gwin.hList = CreateWindowEx(
             WS_EX_CLIENTEDGE,
             WC_LISTVIEW,
             "Processes",
@@ -394,19 +411,19 @@ HWND CREATE_LIST(HWND PARENT,process_arr *array){
             col.mask = LVCF_TEXT | LVCF_WIDTH;
             col.cx = 200;
             col.pszText = "Process Name";
-            ListView_InsertColumn(hList,0,&col);
+            ListView_InsertColumn(gwin.hList,0,&col);
 
             LVCOLUMN col2;
             col2.mask = LVCF_TEXT | LVCF_WIDTH; 
             col2.cx = 200;
             col2.pszText = "PID";
-            ListView_InsertColumn(hList,1,&col2);
+            ListView_InsertColumn(gwin.hList,1,&col2);
 
             LVCOLUMN col3;
             col3.mask = LVCF_TEXT | LVCF_WIDTH; 
             col3.cx = 200;
             col3.pszText = "Thread";
-            ListView_InsertColumn(hList,2,&col3);
+            ListView_InsertColumn(gwin.hList,2,&col3);
 
 
             // Add row
@@ -416,40 +433,46 @@ HWND CREATE_LIST(HWND PARENT,process_arr *array){
             item.iItem = (int)i;
             item.iSubItem = 0;
             item.pszText = array->entries[i].NAME;
-            ListView_InsertItem(hList,&item);
+            ListView_InsertItem(gwin.hList,&item);
 
             char pid[32];
             snprintf(pid,sizeof(pid),"%d",array->entries[i].PID);
-            ListView_SetItemText(hList,i,1,pid);
+            ListView_SetItemText(gwin.hList,i,1,pid);
 
             char thread[32];
             snprintf(thread,sizeof(thread),"%d",array->entries[i].Thread);
-            ListView_SetItemText(hList,i,2,thread);
+            ListView_SetItemText(gwin.hList,i,2,thread);
             }
 
 
-    return hList;
+    return gwin.hList;
 }
 HWND show_selected_process(HWND Parent){
         int x_padding = 20;
         int y_padding = 10;
-        info= CreateWindowEx(WS_EX_CLIENTEDGE,
+        gwin.info= CreateWindowEx(WS_EX_CLIENTEDGE,
         "STATIC",
-        info_buff,
+        gwin.info_buff,
         WS_CHILD|WS_VISIBLE,
         x_padding,y_padding,280,20,
         Parent,
         NULL,
         GetModuleHandle(NULL),
         NULL);
-        return info;
+        return gwin.info;
 }
 
 void refresh_left_table(HWND hwnd){
         MessageBox(NULL, "WM_REFRESH received", "DEBUG", MB_OK);
-            ListView_DeleteAllItems(hlist_left_table);
-            if(global_address_info.count == 0){
+        
+            ListView_DeleteAllItems(gwin.hlist_left_table);
+            if(global_address_info.count == 0 ){
                 MessageBox(hwnd,"no readable memory found","info",MB_OK);
+                return;
+            }
+            else if(gwin.pid ==0)
+            {
+                MessageBox(hwnd,"invalid pid for process","info",MB_OK);
                 return;
             }
             else{
@@ -463,15 +486,15 @@ void refresh_left_table(HWND hwnd){
                 char addr_buff[43];
                 sprintf(addr_buff,"0x%llx",global_address_info.info[i].addr);
                 item.pszText = addr_buff;
-                ListView_InsertItem(hlist_left_table,&item);
+                ListView_InsertItem(gwin.hlist_left_table,&item);
 
                 char value[64];
                 snprintf(value,sizeof(value),"%d",global_address_info.info[i].value);
-                ListView_SetItemText(hlist_left_table,i,1,value);
+                ListView_SetItemText(gwin.hlist_left_table,i,1,value);
 
                 char prev[64];
                 snprintf(prev,sizeof(prev),"%d",global_address_info.info[i].previous);
-                ListView_SetItemText(hlist_left_table,i,2,prev);
+                ListView_SetItemText(gwin.hlist_left_table,i,2,prev);
         }
 }
 

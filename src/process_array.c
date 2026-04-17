@@ -1,7 +1,5 @@
 #include "process_array.h"
 
-
-
 process_arr init_array(){
     process_arr arr_ptr;
     arr_ptr.capacity=5;

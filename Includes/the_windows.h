@@ -4,7 +4,7 @@
 #include <tlhelp32.h>
 #pragma comment(lib, "comctl32.lib")
 
-#define IDR_MYMENU 101
+
 
 #include"process_array.h"
 #include"process_handle.h"
@@ -19,8 +19,20 @@ HWND CREATE_SCAN(HWND Parent);
 void handle_address_range();
 void refresh_left_table(HWND Parent);
 HWND show_selected_process(HWND Parent);
+HWND NEXT_SCAN(HWND Parent);
+
+typedef struct{
+    HWND hList;//global handle for the process list to be able to
+    HWND hlist_left_table;//global handle for list in main window
+    HWND group_box;//global handle for group box
+    int pid;//make pid global
+    char info_buff[200];//
+    HWND info;
+}global_window_states;
+
 
 //objects within the window
+#define IDR_MYMENU 101
 #define WM_REFRESH (WM_USER+1) // handle this for refreshing the list after a scan
 #define ID_FILE_EXIT 60001
 #define ID_HELP_ABOUT 60002
@@ -32,4 +44,5 @@ HWND show_selected_process(HWND Parent);
 #define ID_WRITEABLE_CHECK 60008 //CHECKBOX
 #define ID_GROUP_BOX 60009 
 #define ID_SCAN_BUTTON 60010
+#define ID_NEXT_SCAN_BUTTON 60011
 
