@@ -56,6 +56,7 @@ BOOL getproclist(){
 
     }
     CloseHandle(hprocsnap);
+    close_handle(process);  
     return TRUE;
 }
 BOOL listprocmodules(DWORD dwpid){

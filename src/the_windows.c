@@ -42,14 +42,11 @@ LRESULT CALLBACK ProcessProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                 MessageBox(hwnd, pid_buff, "Selected PID", MB_OK);//debuging
                 snprintf(gwin.info_buff,sizeof(gwin.info_buff),"%s - %d",name_buff,gwin.pid);
 
-                get_process_id(gwin.pid,0);//for now just scan everything
+               
                 char dbg[100];
                 snprintf(dbg, sizeof(dbg), "Posting WM_REFRESH to: %p", GetParent(hwnd));//debugging
                 MessageBox(NULL, dbg, "DEBUG POST", MB_OK);//debugging
                 PostMessage(GetParent(hwnd),WM_REFRESH,0,0);
-                char addr_count[50];
-                snprintf(addr_count,sizeof(addr_count),"Address count: %zu",global_address_info.count);
-                MessageBox(NULL,addr_count,"DEBUG",MB_OK);
                 DestroyWindow(hwnd);
 
             }
@@ -106,16 +103,20 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                 case ID_SCAN_BUTTON:
                     if(HIWORD(wparam)==BN_CLICKED){
                         MessageBeep(MB_ICONINFORMATION);
+                        get_target_value();
                         refresh_left_table(hwnd);
-                        break;
                     }
+                    break;
                 case ID_NEXT_SCAN_BUTTON:
                     if(HIWORD(wparam)==BN_CLICKED){
                         MessageBeep(MB_ICONINFORMATION);
-                        handle_address_range();
+                        char debug_buff[100];
+                        snprintf(debug_buff,sizeof(debug_buff),"%d",global_address_info.count);
+                        MessageBox(NULL,debug_buff,"debug",MB_OK);
+                        compare_changes(gwin.pid,&global_address_info);
                         refresh_left_table(hwnd);
-                        break;
                     }
+                    break;
             }
             break;
         case WM_REFRESH:
@@ -142,7 +143,7 @@ void handle_address_range(){
     GetDlgItemText(gwin.group_box,ID_STOP_EDIT,end_address_buff,sizeof(end_address_buff));
     unsigned long long start_address =strtoull(start_address_buff,NULL,16);
     unsigned long long end_address =strtoull(end_address_buff,NULL,16);
-    scan_memory((DWORD)gwin.pid,start_address,end_address);
+    //scan_memory((DWORD)gwin.pid,start_address,end_address);
 
 }
 HWND CREATE_SCAN(HWND Parent){
@@ -295,7 +296,6 @@ HWND CREATE_LEFT_SIDE_Table(HWND PARENT,address_arr *addr_arr){
 }
         
 HWND CREATE_SIDE_OPTIONS(HWND Parent){
-    HWND h_options;
     int y_padding =65;
     int gap_y =25;
         CreateWindowEx(
@@ -311,7 +311,7 @@ HWND CREATE_SIDE_OPTIONS(HWND Parent){
     );
     y_padding+=gap_y;
 
-    h_options =CreateWindowEx(
+    gwin.h_options =CreateWindowEx(
         WS_EX_CLIENTEDGE,
         "EDIT",
         "",
@@ -321,7 +321,20 @@ HWND CREATE_SIDE_OPTIONS(HWND Parent){
         (HMENU)ID_EDIT_VALUE,
         GetModuleHandle(NULL),
         NULL);
-    return h_options;
+    return gwin.h_options;
+}
+
+void get_target_value(){
+    char target_value[50];
+    char dbg[120];
+    char dbg_2[120];
+    GetWindowText(gwin.h_options, target_value, sizeof(target_value));
+    unsigned int value = atoi(target_value);
+    snprintf(dbg,sizeof(dbg),"%d",value);
+    MessageBox(NULL,dbg,"DEBUG",MB_OK);
+    snprintf(dbg_2,sizeof(dbg_2),"%d",gwin.pid);
+    MessageBox(NULL,dbg_2,"DEBUG",MB_OK);
+    scan_memory(gwin.pid,value);
 }
 //add pid serach
 //add memory addition
@@ -483,17 +496,17 @@ void refresh_left_table(HWND hwnd){
                 item.mask = LVIF_TEXT;
                 item.iItem = i;
                 item.iSubItem = 0;
-                char addr_buff[43];
+                static char addr_buff[43];
                 sprintf(addr_buff,"0x%llx",global_address_info.info[i].addr);
                 item.pszText = addr_buff;
                 ListView_InsertItem(gwin.hlist_left_table,&item);
 
-                char value[64];
-                snprintf(value,sizeof(value),"%d",global_address_info.info[i].value);
+                static char value[64];
+                snprintf(value,sizeof(value),"%u",global_address_info.info[i].value);
                 ListView_SetItemText(gwin.hlist_left_table,i,1,value);
 
-                char prev[64];
-                snprintf(prev,sizeof(prev),"%d",global_address_info.info[i].previous);
+                static char prev[64];
+                snprintf(prev,sizeof(prev),"%u",global_address_info.info[i].previous);
                 ListView_SetItemText(gwin.hlist_left_table,i,2,prev);
         }
 }

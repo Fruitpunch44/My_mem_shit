@@ -18,6 +18,7 @@ HWND CREATE_LEFT_SIDE_Table(HWND Parent,address_arr *addr_arr);
 HWND CREATE_SCAN(HWND Parent);
 void handle_address_range();
 void refresh_left_table(HWND Parent);
+void get_target_value();
 HWND show_selected_process(HWND Parent);
 HWND NEXT_SCAN(HWND Parent);
 
@@ -28,7 +29,10 @@ typedef struct{
     int pid;//make pid global
     char info_buff[200];//
     HWND info;
+    HWND h_options;
 }global_window_states;
+
+extern global_window_states gwin;
 
 
 //objects within the window

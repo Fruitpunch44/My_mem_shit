@@ -8,6 +8,7 @@ unsigned int read_memory(HANDLE proc,unsigned long long addr){
     //you technically can read out all
     SIZE_T number_of_bytes_read;
 
+    //try to fix this 
     unsigned int *buff = malloc(sizeof(int)* BUFF_SIZE);
     HMODULE ntdll = GetModuleHandle("ntdll.dll");
     pZwReadVirtualMemory ZwReadVirtualMemory = (pZwReadVirtualMemory)GetProcAddress(ntdll,"ZwReadVirtualMemory");
@@ -21,7 +22,7 @@ unsigned int read_memory(HANDLE proc,unsigned long long addr){
         MessageBox(NULL,"unable to allocate memory for buffer","error",MB_OK);  
         return 0;
     }
-    NTSTATUS status =ZwReadVirtualMemory(proc,(LPCVOID)addr,buff,BUFF_SIZE,&number_of_bytes_read);
+    NTSTATUS status =ZwReadVirtualMemory(proc,(LPCVOID)addr,buff,sizeof(buff),&number_of_bytes_read);
     if(NT_ERROR(status)){
         char err_mess[50];
         char err_code[20];
@@ -33,15 +34,15 @@ unsigned int read_memory(HANDLE proc,unsigned long long addr){
         free(buff);
         return 0;
     }
+    free(buff);
     return *buff;
 }
 
-void scan_memory(DWORD proc_id,unsigned long long start_address,unsigned long long end_address){
+void scan_memory(DWORD proc_id,DWORD target){
     global_address_info = init_addr_array();
     HANDLE proc;
     MEMORY_BASIC_INFORMATION mbi ={0};
-    unsigned long long base_addr = start_address;
-    unsigned long long end_addr = end_address;
+    unsigned long long base_addr = 0;
     proc= OpenProcess(PROCESS_QUERY_INFORMATION |PROCESS_VM_READ,FALSE,proc_id);
 
      if(proc== NULL){
@@ -59,35 +60,66 @@ void scan_memory(DWORD proc_id,unsigned long long start_address,unsigned long lo
     }
     NTSTATUS status = NtQueryVirtualMemory(proc,(LPVOID)base_addr,MemoryBasicInformation,&mbi,sizeof(mbi),0);
 
-    while(NT_SUCCESS(status) && base_addr < end_addr){
-        address_info *info = malloc(sizeof(address_info));
-        if(!info){
-            fprintf(stderr,"error in mem alloc");
-            return ;
-        }
-
-        // meomry filter 
+    while(NT_SUCCESS(status)){
+        // memory filter 
         if(mbi.State == MEM_COMMIT && 
-            ((mbi.Protect & PAGE_READONLY)|| (mbi.Protect & PAGE_READWRITE))  &&
+            ((mbi.Protect & PAGE_READONLY)|| (mbi.Protect & PAGE_READWRITE) ||(mbi.Protect & PAGE_EXECUTE_READ) 
+            ||(mbi.Protect & PAGE_EXECUTE_READWRITE)) &&
             !(mbi.Protect & PAGE_NOACCESS) &&
             !(mbi.Protect & PAGE_GUARD)){
+                unsigned long long start = (unsigned long long)(void*)mbi.BaseAddress;
+                unsigned long long end = start + mbi.RegionSize;
                 fprintf(stdout,"Memory region at 0x%p is committed and accessible.\n", (void*)mbi.BaseAddress);
-                info->addr =(unsigned long long)mbi.BaseAddress;
-                info->value = read_memory(proc, (unsigned long long)mbi.BaseAddress);
-                info->previous = info->value;
-                add_array_address_info(&global_address_info,info);
-                free(info);
+                
+                while(start < end){
+                    unsigned int value = read_memory(proc, start);
+                    if(value == target){
+                        address_info *info = malloc(sizeof(address_info));
+                        if(!info){
+                            fprintf(stderr,"error in mem alloc");
+                            CloseHandle(proc);
+                            return;
+                        }
+                        info->addr = start;
+                        info->value = value;
+                        info->previous = value;
+                        add_array_address_info(&global_address_info, info);
+                        free(info);
+                    }
+                    start += sizeof(int); //increment by 4 bytes to read the next value
+                }
             }
-            base_addr += mbi.RegionSize;
+            base_addr += mbi.RegionSize;//move to the next region
             status = NtQueryVirtualMemory(proc, (LPVOID)base_addr, MemoryBasicInformation, &mbi, sizeof(mbi), NULL);
-            //note to self do not call outside of a loop to prevent crashes 
         }
         CloseHandle(proc);
 }
 
 
+void compare_changes(DWORD proc_id,address_arr *arr){
+    HANDLE proc;
+    proc= OpenProcess(PROCESS_QUERY_INFORMATION |PROCESS_VM_READ,FALSE,proc_id);
+
+    if(proc == NULL){
+        MessageBox(NULL,"ERROR IN GETING PROCESS INFO","ERROR",MB_ICONERROR);
+        return;
+    }
+
+    for(int i = 0 ;i< arr->count;i++){
+        unsigned int re_read_value = read_memory(proc,arr->info[i].addr);
+        if(re_read_value != arr->info[i].value){
+            arr->info[i].previous = arr->info[i].value;
+            arr->info[i].value = re_read_value;
+        }
+    }
+    CloseHandle(proc);
+}
+
 //scan from 0 to max
+/*
+LEAVE THIS OUT FOR NOW 
 void get_process_id(DWORD proc_id,unsigned long long start){
     unsigned long long end =0xffffffffffffffff;
-    scan_memory(proc_id,start,end);
+    scan_memory(proc_id,start,end,);
 }
+    */
