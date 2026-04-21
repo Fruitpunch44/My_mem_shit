@@ -29,12 +29,14 @@ BOOL getproclist(){
         fprintf(stdout,"PROCESS NAME : %s\n",entry32.szExeFile);
         priorityclass = 0;
         process= OpenProcess(PROCESS_ALL_ACCESS,FALSE,entry32.th32ProcessID);
+        char error_buff[100];
+        snprintf(error_buff,sizeof(error_buff),"%d",GetLastError());
         if(process == NULL){
-            fprintf(stderr,"an error %s occured\n",strerror(GetLastError()));
+            fprintf(stderr,"an error %s occured\n",error_buff);
         }
         priorityclass = GetPriorityClass(process);
         if(!priorityclass){
-            fprintf(stderr,"an error %s occured\n",strerror(GetLastError()));
+            fprintf(stderr,"an error %s occured\n",error_buff);
             CloseHandle(process);
         }
         process_info *info= malloc(sizeof(process_info));
@@ -56,7 +58,7 @@ BOOL getproclist(){
 
     }
     CloseHandle(hprocsnap);
-    close_handle(process);  
+    CloseHandle(process);  
     return TRUE;
 }
 BOOL listprocmodules(DWORD dwpid){
@@ -64,14 +66,19 @@ BOOL listprocmodules(DWORD dwpid){
     MODULEENTRY32 me32;
 
     MODULE=CreateToolhelp32Snapshot(TH32CS_SNAPMODULE,dwpid);
+    
       if(MODULE == INVALID_HANDLE_VALUE){
-        fprintf(stderr,"an error %s occured\n",strerror(GetLastError()));
+        char error_buff[100];
+        snprintf(error_buff,sizeof(error_buff),"%d",GetLastError());
+        fprintf(stderr,"an error %s occured\n",error_buff);
         return FALSE;
     }
 
     me32.dwSize = sizeof(MODULEENTRY32);
     if(!Module32First(MODULE,&me32)){
-         fprintf(stderr,"an error %s occured",strerror(GetLastError()));
+        char error_buff[100];
+        snprintf(error_buff,sizeof(error_buff),"%d",GetLastError());
+         fprintf(stderr,"an error %s occured",error_buff);
          CloseHandle(MODULE);
          return FALSE;
     }

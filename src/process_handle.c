@@ -4,6 +4,22 @@
 // void write_memory(HANDLE process, BYTE *address,BYTE value);
 //add range scan
 address_arr global_address_info;
+
+//if void can handle various types i don't know;
+/*
+void *write_memomry(HANDLE proc,UINT value,unsigned long long addr){
+    size_t number_of_bytes_to_read;
+    HMODULE ntdll = GetModuleHandle("ntdll.dll");
+    pZwriteVirtualMemory ZwReadVirtualMemory = (pZwriteVirtualMemory)GetProcAddress(ntdll,"ZwReadVirtualMemory");
+    if(!ZwReadVirtualMemory){
+        MessageBox(NULL,"unable to get address of ZwReadVirtualMemory","error",MB_OK);
+        return 0;
+    }
+
+    NTSTATUS status = ZwReadVirtualMemory(proc,(LPCVOID)addr,)
+}
+    implement later
+    */  
 unsigned int read_memory(HANDLE proc,unsigned long long addr){
     //you technically can read out all
     SIZE_T number_of_bytes_read;
@@ -114,7 +130,12 @@ void compare_changes(DWORD proc_id,address_arr *arr){
     }
     CloseHandle(proc);
 }
-
+/*there is something to consider reagding this and how can i effectively filter out the
+process after a 2nd scan i do not know how to go about that for now what happens is that you initially 
+search for value and it pops out the various address associated with that value that's all fine and good 
+but the issue now is how can i use next scan to now filter out the values so only that said 
+values will be shown that is the main issue rn and i have to try to figure it out 
+do i need to scan again maybe i will figure it out but that might cause issues*/
 //scan from 0 to max
 /*
 LEAVE THIS OUT FOR NOW 

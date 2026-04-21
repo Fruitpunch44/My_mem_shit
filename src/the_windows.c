@@ -4,6 +4,7 @@ add string search function
 use wm_notify later
 add better filtering
 add write modifications
+add status bar 
 */ 
 global_window_states gwin;
 
@@ -67,6 +68,7 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             CREATE_LEFT_SIDE_Table(hwnd,&global_address_info);//
             CREATE_BOTTOM_LIST(hwnd);
             CREATE_SIDE_OPTIONS(hwnd);
+            CREATE_COMBO_BOX(hwnd);
             CREATE_GROUP_BOX(hwnd);
             CREATE_SCAN(hwnd);
             NEXT_SCAN(hwnd);
@@ -97,7 +99,6 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                     MessageBox(NULL,"A work in progress memory hacker","LOL 2.O",MB_OK|MB_ICONINFORMATION);
                     break;
                 case ID_OPEN_PROCESS:
-                    getproclist();
                     CREATE_LIST(hwnd,&global_process);
                     break;
                 case ID_SCAN_BUTTON:
@@ -117,6 +118,15 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                         refresh_left_table(hwnd);
                     }
                     break;
+                case ID_COMBO_BOX_DROP:
+                    if(HIWORD(wparam)==CBN_SELCHANGE){
+                        int Item_index = SendMessage((HWND)lparam,(UINT)CB_GETCURSEL,(WPARAM)0,(LPARAM)0);
+                        char buff[128];
+                        SendMessage((HWND)lparam,(UINT)CB_GETLBTEXT,(WPARAM)Item_index,(LPARAM)buff);
+                        //do something that ma
+
+
+                    }
             }
             break;
         case WM_REFRESH:
@@ -158,6 +168,24 @@ HWND CREATE_SCAN(HWND Parent){
     NULL);
     return scan_button;
     }
+
+HWND CREATE_COMBO_BOX(HWND Parent){
+    gwin.my_drop_down =CreateWindowEx(WS_EX_CLIENTEDGE,WC_COMBOBOX,
+    "",
+    CBS_DROPDOWNLIST|WS_CHILD|WS_VISIBLE|WS_VSCROLL,
+    570,65,200,300,//set the x and y to be of reasonable size so the fulldrop down can show
+    Parent,(HMENU)ID_COMBO_BOX_DROP,
+    GetModuleHandle(NULL),
+    NULL);
+    //find a way to get the type value you want to search for and use that in the scan
+    //for now i can just scan 4 bytes
+    SendMessage(gwin.my_drop_down,(UINT)CB_ADDSTRING,(WPARAM)0,(LPARAM)"INT(4 BYTES)");
+    SendMessage(gwin.my_drop_down,(UINT)CB_ADDSTRING,(WPARAM)0,(LPARAM)"STRING");
+    SendMessage(gwin.my_drop_down,(UINT)CB_SETCURSEL,(WPARAM)0,(LPARAM)0);
+    return gwin.my_drop_down;
+    
+}
+
 HWND NEXT_SCAN(HWND Parent){
     HWND next_scan_button;
     next_scan_button=CreateWindowEx(WS_EX_WINDOWEDGE,
@@ -326,14 +354,14 @@ HWND CREATE_SIDE_OPTIONS(HWND Parent){
 
 void get_target_value(){
     char target_value[50];
-    char dbg[120];
-    char dbg_2[120];
+    //char dbg[120];
+    //char dbg_2[120];
     GetWindowText(gwin.h_options, target_value, sizeof(target_value));
     unsigned int value = atoi(target_value);
-    snprintf(dbg,sizeof(dbg),"%d",value);
-    MessageBox(NULL,dbg,"DEBUG",MB_OK);
-    snprintf(dbg_2,sizeof(dbg_2),"%d",gwin.pid);
-    MessageBox(NULL,dbg_2,"DEBUG",MB_OK);
+    //snprintf(dbg,sizeof(dbg),"%d",value);
+    //MessageBox(NULL,dbg,"DEBUG",MB_OK);
+    //snprintf(dbg_2,sizeof(dbg_2),"%d",gwin.pid);
+    //MessageBox(NULL,dbg_2,"DEBUG",MB_OK);
     scan_memory(gwin.pid,value);
 }
 //add pid serach
@@ -380,7 +408,9 @@ HWND CREATE_BOTTOM_LIST(HWND PARENT){
 
 }
 HWND CREATE_LIST(HWND PARENT,process_arr *array){ 
+        //might move proc list here
         //when posting to a parent window avoid using WS_OVERLAPPEDWINDOW
+        getproclist();
         HWND hlist_main;
         HWND button;
         //create main window for list

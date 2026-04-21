@@ -20,6 +20,7 @@ void handle_address_range();
 void refresh_left_table(HWND Parent);
 void get_target_value();
 HWND show_selected_process(HWND Parent);
+HWND CREATE_COMBO_BOX(HWND Parent);
 HWND NEXT_SCAN(HWND Parent);
 
 typedef struct{
@@ -30,6 +31,7 @@ typedef struct{
     char info_buff[200];//
     HWND info;
     HWND h_options;
+    HWND my_drop_down;
 }global_window_states;
 
 extern global_window_states gwin;
@@ -49,4 +51,5 @@ extern global_window_states gwin;
 #define ID_GROUP_BOX 60009 
 #define ID_SCAN_BUTTON 60010
 #define ID_NEXT_SCAN_BUTTON 60011
+#define ID_COMBO_BOX_DROP  60012
 
