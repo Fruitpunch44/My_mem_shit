@@ -32,6 +32,7 @@ typedef struct{
     HWND info;
     HWND h_options;
     HWND my_drop_down;
+    unsigned int value;
 }global_window_states;
 
 extern global_window_states gwin;

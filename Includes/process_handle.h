@@ -39,12 +39,16 @@ typedef NTSTATUS(NTAPI *pNtQueryVirtualMemory)(
 
 //void string_search(char *string_to_find);
 
+typedef struct{
+    DWORD pid;
+    DWORD Target;
+}thread_params;
 
 unsigned int read_memory(HANDLE proc,unsigned long long addr);
 void scan_memory(DWORD proc_id,DWORD target);
 //void get_process_id(DWORD proc_id,unsigned long long start);
 void compare_changes(DWORD proc_id,address_arr *arr);
-
+DWORD WINAPI scan_thread(LPVOID lpParam);
 
 
 #endif

@@ -5,6 +5,7 @@ use wm_notify later
 add better filtering
 add write modifications
 add status bar 
+add threading to prevent ui blocking
 */ 
 global_window_states gwin;
 
@@ -105,6 +106,10 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                     if(HIWORD(wparam)==BN_CLICKED){
                         MessageBeep(MB_ICONINFORMATION);
                         get_target_value();
+                        thread_params *params = malloc(sizeof(thread_params));
+                        params->pid=gwin.pid;
+                        params->Target=gwin.value;
+                        HANDLE threads=CreateThread(NULL,0,scan_thread,params,0,NULL);
                         refresh_left_table(hwnd);
                     }
                     break;
@@ -123,9 +128,6 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                         int Item_index = SendMessage((HWND)lparam,(UINT)CB_GETCURSEL,(WPARAM)0,(LPARAM)0);
                         char buff[128];
                         SendMessage((HWND)lparam,(UINT)CB_GETLBTEXT,(WPARAM)Item_index,(LPARAM)buff);
-                        //do something that ma
-
-
                     }
             }
             break;
@@ -353,16 +355,16 @@ HWND CREATE_SIDE_OPTIONS(HWND Parent){
 }
 
 void get_target_value(){
-    char target_value[50];
     //char dbg[120];
     //char dbg_2[120];
+    char target_value[64];
     GetWindowText(gwin.h_options, target_value, sizeof(target_value));
-    unsigned int value = atoi(target_value);
+    gwin.value = atoi(target_value);
     //snprintf(dbg,sizeof(dbg),"%d",value);
     //MessageBox(NULL,dbg,"DEBUG",MB_OK);
     //snprintf(dbg_2,sizeof(dbg_2),"%d",gwin.pid);
     //MessageBox(NULL,dbg_2,"DEBUG",MB_OK);
-    scan_memory(gwin.pid,value);
+
 }
 //add pid serach
 //add memory addition

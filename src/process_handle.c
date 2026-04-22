@@ -54,6 +54,14 @@ unsigned int read_memory(HANDLE proc,unsigned long long addr){
     return *buff;
 }
 
+DWORD WINAPI scan_thread(LPVOID lpParam){
+    //cast the struct pointer to lparam
+    thread_params *params = (thread_params*)lpParam;
+    scan_memory(params->pid,params->Target);
+    free(params);
+    return 0;
+}
+
 void scan_memory(DWORD proc_id,DWORD target){
     global_address_info = init_addr_array();
     HANDLE proc;
@@ -85,14 +93,14 @@ void scan_memory(DWORD proc_id,DWORD target){
             !(mbi.Protect & PAGE_GUARD)){
                 unsigned long long start = (unsigned long long)(void*)mbi.BaseAddress;
                 unsigned long long end = start + mbi.RegionSize;
-                fprintf(stdout,"Memory region at 0x%p is committed and accessible.\n", (void*)mbi.BaseAddress);
+                //fprintf(stdout,"Memory region at 0x%p is committed and accessible.\n", (void*)mbi.BaseAddress);
                 
                 while(start < end){
                     unsigned int value = read_memory(proc, start);
                     if(value == target){
                         address_info *info = malloc(sizeof(address_info));
                         if(!info){
-                            fprintf(stderr,"error in mem alloc");
+                            //fprintf(stderr,"error in mem alloc");
                             CloseHandle(proc);
                             return;
                         }
@@ -117,7 +125,7 @@ void compare_changes(DWORD proc_id,address_arr *arr){
     proc= OpenProcess(PROCESS_QUERY_INFORMATION |PROCESS_VM_READ,FALSE,proc_id);
 
     if(proc == NULL){
-        MessageBox(NULL,"ERROR IN GETING PROCESS INFO","ERROR",MB_ICONERROR);
+        //MessageBox(NULL,"ERROR IN GETING PROCESS INFO","ERROR",MB_ICONERROR);
         return;
     }
 
