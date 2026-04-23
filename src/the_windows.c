@@ -58,7 +58,6 @@ LRESULT CALLBACK ProcessProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
     }
     return 0;
 }
-
 LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
     switch(msg){
         case WM_CLOSE:
@@ -106,6 +105,7 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                     if(HIWORD(wparam)==BN_CLICKED){
                         MessageBeep(MB_ICONINFORMATION);
                         get_target_value();
+                        //create thread to scan memory so ui doesnt freeze
                         thread_params *params = malloc(sizeof(thread_params));
                         params->pid=gwin.pid;
                         params->Target=gwin.value;
@@ -125,6 +125,7 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                     break;
                 case ID_COMBO_BOX_DROP:
                     if(HIWORD(wparam)==CBN_SELCHANGE){
+                        //does nothing for now
                         int Item_index = SendMessage((HWND)lparam,(UINT)CB_GETCURSEL,(WPARAM)0,(LPARAM)0);
                         char buff[128];
                         SendMessage((HWND)lparam,(UINT)CB_GETLBTEXT,(WPARAM)Item_index,(LPARAM)buff);
@@ -136,6 +137,22 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             //the issue was due to the process window being an overlappedwindow 
             SetWindowText(gwin.info, gwin.info_buff);
             break;
+        case WM_NOTIFY:
+            switch(((LPNMHDR)lparam)->code){
+                case NM_DBLCLK:
+                    char addr[64];
+                    char buff[128];
+                    unsigned long long address;
+                    int pos =ListView_GetNextItem(gwin.hlist_left_table,-1,LVNI_SELECTED);
+                    int addr_column  = 0;
+                    ListView_GetItemText(gwin.hlist_left_table,pos,addr_column,addr,sizeof(addr));
+                    address = strtoull(addr,NULL,16);
+                    snprintf(buff,sizeof(buff),"the address u selected is 0x%llx",address);
+                    MessageBox(NULL,buff,"test",MB_OK);
+                    create_popup(hwnd);
+                    break;
+                }
+            break;
         case WM_DESTROY:
             PostQuitMessage(0);
             break;
@@ -143,6 +160,71 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             return DefWindowProc(hwnd,msg,wparam,lparam);
     }
     return 0;
+}
+LRESULT CALLBACK PopupProc(HWND hwnd,UINT msg, WPARAM wparam, LPARAM lparam){
+    switch(msg){
+        case WM_CLOSE:
+            DestroyWindow(hwnd);
+            break;
+   
+        default:
+            return DefWindowProc(hwnd,msg,wparam,lparam);
+    }
+    return 0;
+}
+
+HWND create_popup(HWND parent){
+    HWND popup;
+    HWND address_form;
+    HWND write_button;
+    HWND cancel_button;
+    HWND form_label;
+
+    int x_padding = 140;
+    int y_padding = 50;
+    int x_gap = 100;
+    int y_gap = 20;
+   
+    //CW_USERDEFAULT IS 0 with WS_POPUPWINDOW
+    popup=CreateWindowEx(WS_EX_CLIENTEDGE,"Popupwindow","WRITE",
+        WS_POPUPWINDOW|WS_VISIBLE|WS_CAPTION,
+        20,20,500,200,parent,
+        NULL,GetModuleHandle(NULL),NULL);
+    
+    
+    form_label =CreateWindowEx(0,
+        "STATIC",
+        "Value",
+        WS_CHILD|WS_VISIBLE,
+        x_padding-30,y_padding,300,20,
+        popup,NULL,GetModuleHandle(NULL),NULL);
+        y_padding+=y_gap;
+
+    address_form =CreateWindowEx(WS_EX_CLIENTEDGE,
+        "EDIT",
+        "",
+        WS_CHILD|WS_VISIBLE|WS_BORDER,
+        x_padding-30,y_padding,300,40,
+        popup,(HMENU)ID_POPUP_FORM,GetModuleHandle(NULL),NULL);
+        y_padding+= y_gap*2;
+
+    write_button = CreateWindowEx(0,
+        "BUTTON",
+        "WRITE",
+        BS_PUSHBUTTON|WS_CHILD|WS_VISIBLE,
+        x_padding,y_padding,80,20,
+        popup,(HMENU)ID_POPUP_WRITE,GetModuleHandle(NULL),NULL);
+        x_padding+=x_gap;
+
+    cancel_button = CreateWindowEx(0,
+        "BUTTON",
+        "CANCEL",
+        BS_PUSHBUTTON|WS_CHILD|WS_VISIBLE,
+        x_padding,y_padding,80,20,
+        popup,(HMENU)ID_POPUP_CANCEL,GetModuleHandle(NULL),NULL);   
+    
+    return popup;
+
 }
 
 void handle_address_range(){
@@ -227,7 +309,7 @@ HWND CREATE_GROUP_BOX(HWND Parent){
         GetModuleHandle(NULL),
         NULL
     );
-    y_padding +=gap_y;
+     y_padding +=gap_y;
     CreateWindowEx(
         WS_EX_CLIENTEDGE,
         "EDIT",
@@ -546,13 +628,15 @@ void refresh_left_table(HWND hwnd){
 int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow){
     WNDCLASSEX wc = {0};
     WNDCLASSEX wc2 = {0};
+    WNDCLASSEX wc3 = {0};
     HWND hwnd;
     MSG msg;
     INITCOMMONCONTROLSEX icex = {0};
     icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
     icex.dwICC = ICC_LISTVIEW_CLASSES;
     InitCommonControlsEx(&icex);
-
+    
+    //main window class
     wc.cbSize = sizeof(WNDCLASSEX);
     wc.style = 0;
     wc.lpfnWndProc = WndProc;
@@ -574,8 +658,21 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
     wc2.hCursor = LoadCursor(NULL,IDC_ARROW);
     wc2.hbrBackground = (HBRUSH)(COLOR_WINDOW+1);
 
+    //process window class
+    wc3.cbSize=sizeof(WNDCLASSEX);
+    wc3.lpfnWndProc = PopupProc;
+    wc3.hInstance= GetModuleHandle(NULL);
+    wc3.lpszClassName = "Popupwindow";
+    wc3.hCursor = LoadCursor(NULL,IDC_ARROW);
+    wc2.hbrBackground = (HBRUSH)(COLOR_WINDOW+1);
+
+
     if(!RegisterClassEx(&wc)){
+        char err_mess[50];
+        DWORD err= GetLastError();
         MessageBox(NULL,"Window Registration Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
+        snprintf(err_mess,sizeof(err_mess),"%d",err);
+        MessageBox(NULL,err_mess,"error code",MB_ICONEXCLAMATION|MB_OK); 
         return 0;
     }
     if(!RegisterClassEx(&wc2)){
@@ -584,9 +681,19 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
         MessageBox(NULL,"Window Registration Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
         snprintf(err_mess,sizeof(err_mess),"%d",err);
         MessageBox(NULL,err_mess,"error code",MB_ICONEXCLAMATION|MB_OK); 
+        return 0;
     }
 
-    hwnd = CreateWindowEx(WS_EX_CLIENTEDGE,"myWindowClass","Sucky scan",WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,CW_USEDEFAULT,860,680,NULL,NULL,hInstance,NULL);
+    if(!RegisterClassEx(&wc3)){
+        char err_mess[50];
+        DWORD err= GetLastError();
+        MessageBox(NULL,"Window Registration Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
+        snprintf(err_mess,sizeof(err_mess),"%d",err);
+        MessageBox(NULL,err_mess,"error code",MB_ICONEXCLAMATION|MB_OK); 
+        return 0;
+    }
+    hwnd = CreateWindowEx(WS_EX_CLIENTEDGE,"myWindowClass","Sucky scan",
+        WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,CW_USEDEFAULT,860,680,NULL,NULL,hInstance,NULL);
 
     if(hwnd == NULL){
         MessageBox(NULL,"Window Creation Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);

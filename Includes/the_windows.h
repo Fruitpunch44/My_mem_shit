@@ -22,6 +22,7 @@ void get_target_value();
 HWND show_selected_process(HWND Parent);
 HWND CREATE_COMBO_BOX(HWND Parent);
 HWND NEXT_SCAN(HWND Parent);
+HWND create_popup(HWND parent);
 
 typedef struct{
     HWND hList;//global handle for the process list to be able to
@@ -39,18 +40,21 @@ extern global_window_states gwin;
 
 
 //objects within the window
-#define IDR_MYMENU 101
-#define WM_REFRESH (WM_USER+1) // handle this for refreshing the list after a scan
-#define ID_FILE_EXIT 60001
-#define ID_HELP_ABOUT 60002
-#define ID_OPEN_PROCESS 60003
-#define ID_SELECT 60004 //BUTTON
-#define ID_EDIT_VALUE 60005 //EDIT FIELS    
-#define ID_START_EDIT 60006 //START FIELD
-#define ID_STOP_EDIT 60007 //STOP FIELD
-#define ID_WRITEABLE_CHECK 60008 //CHECKBOX
-#define ID_GROUP_BOX 60009 
-#define ID_SCAN_BUTTON 60010
+#define IDR_MYMENU          101
+#define WM_REFRESH          (WM_USER+1) // handle this for refreshing the list after a scan
+#define ID_FILE_EXIT        60001
+#define ID_HELP_ABOUT       60002
+#define ID_OPEN_PROCESS     60003
+#define ID_SELECT           60004 //BUTTON
+#define ID_EDIT_VALUE       60005 //EDIT FIELS    
+#define ID_START_EDIT       60006 //START FIELD
+#define ID_STOP_EDIT        60007 //STOP FIELD
+#define ID_WRITEABLE_CHECK  60008 //CHECKBOX
+#define ID_GROUP_BOX        60009 
+#define ID_SCAN_BUTTON      60010
 #define ID_NEXT_SCAN_BUTTON 60011
-#define ID_COMBO_BOX_DROP  60012
+#define ID_COMBO_BOX_DROP   60012
+#define ID_POPUP_WRITE      60013
+#define ID_POPUP_CANCEL     60014
+#define ID_POPUP_FORM       60015
 

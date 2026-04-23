@@ -13,7 +13,9 @@ BOOL getproclist(){
     //get snap
     hprocsnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,0);
     if(hprocsnap == INVALID_HANDLE_VALUE){
-        fprintf(stderr,"an error %s occured\n",strerror(GetLastError()));
+        char error_buff[100];
+        snprintf(error_buff,sizeof(error_buff),"%d",GetLastError());
+        fprintf(stderr,"an error %s occured\n",error_buff);
         return FALSE;
     }
 
@@ -21,7 +23,9 @@ BOOL getproclist(){
     entry32.dwSize = sizeof(PROCESSENTRY32);
 
     if(!Process32First(hprocsnap,&entry32)){
-        fprintf(stderr,"an error %s occured\n",strerror(GetLastError()));
+        char error_buff[100];
+        snprintf(error_buff,sizeof(error_buff),"%d",GetLastError());
+        fprintf(stderr,"an error %s occured\n",error_buff);
         CloseHandle(hprocsnap);
         return FALSE;
     }
