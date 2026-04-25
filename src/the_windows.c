@@ -9,6 +9,36 @@ add threading to prevent ui blocking
 */ 
 global_window_states gwin;
 
+LRESULT CALLBACK PopupProc(HWND hwnd,UINT msg, WPARAM wparam, LPARAM lparam){
+    switch(msg){
+        case WM_CLOSE:
+            DestroyWindow(hwnd);
+            break;
+        case WM_COMMAND:
+            switch(LOWORD(wparam)){
+                case ID_POPUP_WRITE:
+                    char buff[90];
+                    char test[220];
+                    GetWindowText(gwin.address_form,buff,sizeof(buff));
+                    gwin.form_value= strtoul(buff,NULL,10);
+                    snprintf(test,sizeof(test),"this is a test val:%u",gwin.form_value);
+                    MessageBox(NULL,test,"TEST",MB_OK);
+                    char dbg[100];
+                    snprintf(dbg, sizeof(dbg), "Posting WM_WRITE_VAL to: %p", GetParent(hwnd));//debugging
+                    MessageBox(NULL,dbg,"dbug",MB_OK);
+                    PostMessage(GetParent(hwnd),WM_WRITE_VAL,0,0);   
+                    DestroyWindow(hwnd);
+                case ID_POPUP_CANCEL:
+                    DestroyWindow(hwnd);
+                    break;
+            }
+            break;
+        default:
+            return DefWindowProc(hwnd,msg,wparam,lparam);
+    }
+    return 0;
+}
+
 LRESULT CALLBACK ProcessProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
     switch(msg){
         case WM_CLOSE:
@@ -16,11 +46,11 @@ LRESULT CALLBACK ProcessProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
         break;
 
         case WM_COMMAND:
-            MessageBox(NULL, "Command received", "Info", MB_OK);//debuging
+            //MessageBox(NULL, "Command received", "Info", MB_OK);//debuging
             //CONTROL CODE IS LOWRD NOTIFICATION CODE IS HIWORD
             if(LOWORD(wparam)==ID_SELECT && HIWORD(wparam)==BN_CLICKED){
 
-                MessageBox(NULL, "Select button clicked", "Info", MB_OK);//debuging
+                //MessageBox(NULL, "Select button clicked", "Info", MB_OK);//debuging
                 char pid_buff[50];
                 char name_buff[120];
                 int pos =ListView_GetNextItem(gwin.hList,-1,LVNI_SELECTED);
@@ -45,9 +75,9 @@ LRESULT CALLBACK ProcessProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                 snprintf(gwin.info_buff,sizeof(gwin.info_buff),"%s - %d",name_buff,gwin.pid);
 
                
-                char dbg[100];
-                snprintf(dbg, sizeof(dbg), "Posting WM_REFRESH to: %p", GetParent(hwnd));//debugging
-                MessageBox(NULL, dbg, "DEBUG POST", MB_OK);//debugging
+                //char dbg[100];
+                //snprintf(dbg, sizeof(dbg), "Posting WM_REFRESH to: %p", GetParent(hwnd));//debugging
+                //MessageBox(NULL, dbg, "DEBUG POST", MB_OK);//debugging
                 PostMessage(GetParent(hwnd),WM_REFRESH,0,0);
                 DestroyWindow(hwnd);
 
@@ -58,6 +88,7 @@ LRESULT CALLBACK ProcessProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
     }
     return 0;
 }
+
 LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
     switch(msg){
         case WM_CLOSE:
@@ -75,7 +106,6 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             show_selected_process(hwnd);
             HMENU hmenu,hsub,hsub2;
             hmenu=CreateMenu();
-
 
             //create pop up
             hsub=CreatePopupMenu();
@@ -153,6 +183,9 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                     break;
                 }
             break;
+        case WM_WRITE_VAL:
+            write_to_address(global_address_info.info[0].addr,gwin.form_value);   
+            break;
         case WM_DESTROY:
             PostQuitMessage(0);
             break;
@@ -161,34 +194,23 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
     }
     return 0;
 }
-LRESULT CALLBACK PopupProc(HWND hwnd,UINT msg, WPARAM wparam, LPARAM lparam){
-    switch(msg){
-        case WM_CLOSE:
-            DestroyWindow(hwnd);
-            break;
-   
-        default:
-            return DefWindowProc(hwnd,msg,wparam,lparam);
-    }
-    return 0;
-}
 
 HWND create_popup(HWND parent){
     HWND popup;
-    HWND address_form;
     HWND write_button;
     HWND cancel_button;
     HWND form_label;
+    char address_buff[64];
 
     int x_padding = 140;
     int y_padding = 50;
     int x_gap = 100;
     int y_gap = 20;
    
-    //CW_USERDEFAULT IS 0 with WS_POPUPWINDOW
-    popup=CreateWindowEx(WS_EX_CLIENTEDGE,"Popupwindow","WRITE",
+    snprintf(address_buff,sizeof(address_buff)," Writting to 0x%llx",global_address_info.info[0].addr);
+    popup=CreateWindowEx(WS_EX_CLIENTEDGE,"Popupwindow",address_buff,
         WS_POPUPWINDOW|WS_VISIBLE|WS_CAPTION,
-        20,20,500,200,parent,
+        20,20,400,200,parent,
         NULL,GetModuleHandle(NULL),NULL);
     
     
@@ -196,15 +218,15 @@ HWND create_popup(HWND parent){
         "STATIC",
         "Value",
         WS_CHILD|WS_VISIBLE,
-        x_padding-30,y_padding,300,20,
+        x_padding-100,y_padding,300,20,
         popup,NULL,GetModuleHandle(NULL),NULL);
         y_padding+=y_gap;
 
-    address_form =CreateWindowEx(WS_EX_CLIENTEDGE,
+    gwin.address_form =CreateWindowEx(WS_EX_CLIENTEDGE,
         "EDIT",
         "",
         WS_CHILD|WS_VISIBLE|WS_BORDER,
-        x_padding-30,y_padding,300,40,
+        x_padding-100,y_padding,300,25,
         popup,(HMENU)ID_POPUP_FORM,GetModuleHandle(NULL),NULL);
         y_padding+= y_gap*2;
 

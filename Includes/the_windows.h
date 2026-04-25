@@ -28,12 +28,14 @@ typedef struct{
     HWND hList;//global handle for the process list to be able to
     HWND hlist_left_table;//global handle for list in main window
     HWND group_box;//global handle for group box
-    int pid;//make pid global
-    char info_buff[200];//
     HWND info;
     HWND h_options;
     HWND my_drop_down;
+    HWND address_form;
+    int pid;//make pid global
     unsigned int value;
+    unsigned int form_value;
+    char info_buff[200];//   
 }global_window_states;
 
 extern global_window_states gwin;
@@ -42,6 +44,7 @@ extern global_window_states gwin;
 //objects within the window
 #define IDR_MYMENU          101
 #define WM_REFRESH          (WM_USER+1) // handle this for refreshing the list after a scan
+#define WM_WRITE_VAL        (WM_USER+3)
 #define ID_FILE_EXIT        60001
 #define ID_HELP_ABOUT       60002
 #define ID_OPEN_PROCESS     60003

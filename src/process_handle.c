@@ -4,22 +4,34 @@
 // void write_memory(HANDLE process, BYTE *address,BYTE value);
 //add range scan
 address_arr global_address_info;
+global_process_handle global_proc;
 
 //if void can handle various types i don't know;
-/*
-void *write_memomry(HANDLE proc,UINT value,unsigned long long addr){
-    size_t number_of_bytes_to_read;
+
+unsigned int write_memomry(HANDLE proc,UINT value,unsigned long long addr){
+    size_t number_of_bytes_to_written;
     HMODULE ntdll = GetModuleHandle("ntdll.dll");
-    pZwriteVirtualMemory ZwReadVirtualMemory = (pZwriteVirtualMemory)GetProcAddress(ntdll,"ZwReadVirtualMemory");
-    if(!ZwReadVirtualMemory){
+    pZwWriteVirtualMemory ZwWriteVirtualMemory = (pZwWriteVirtualMemory)GetProcAddress(ntdll,"ZwWriteVirtualMemory");
+    if(!ZwWriteVirtualMemory){
         MessageBox(NULL,"unable to get address of ZwReadVirtualMemory","error",MB_OK);
         return 0;
     }
 
-    NTSTATUS status = ZwReadVirtualMemory(proc,(LPCVOID)addr,)
+    NTSTATUS status = ZwWriteVirtualMemory(proc,(LPCVOID)addr,&value,sizeof(value),&number_of_bytes_to_written);
+
+    if(NT_ERROR(status)){
+        char err_mess[50];
+        char err_code[20];
+        DWORD err= GetLastError();
+        snprintf(err_mess,sizeof(err_mess),"error in writing to 0%p", (LPCVOID)addr);
+        snprintf(err_code,sizeof(err_code),"%d",err);
+        MessageBox(NULL,err_code,"error code",MB_OK);
+        MessageBox(NULL,err_mess,"error",MB_OK);
+        return 0;
+    }
+    return 1;
 }
-    implement later
-    */  
+
 unsigned int read_memory(HANDLE proc,unsigned long long addr){
     //you technically can read out all
     SIZE_T number_of_bytes_read;
@@ -64,12 +76,12 @@ DWORD WINAPI scan_thread(LPVOID lpParam){
 
 void scan_memory(DWORD proc_id,DWORD target){
     global_address_info = init_addr_array();
-    HANDLE proc;
     MEMORY_BASIC_INFORMATION mbi ={0};
     unsigned long long base_addr = 0;
-    proc= OpenProcess(PROCESS_QUERY_INFORMATION |PROCESS_VM_READ,FALSE,proc_id);
+    global_proc.proc= OpenProcess(PROCESS_QUERY_INFORMATION |PROCESS_VM_READ|
+                                PROCESS_VM_WRITE|PROCESS_VM_OPERATION,FALSE,proc_id);
 
-     if(proc== NULL){
+     if(global_proc.proc== NULL){
         fprintf(stderr,"unable to open process \n pls pass in a valid pid %s",strerror(GetLastError()));
         return;
     }
@@ -79,10 +91,10 @@ void scan_memory(DWORD proc_id,DWORD target){
     pNtQueryVirtualMemory NtQueryVirtualMemory = (pNtQueryVirtualMemory)GetProcAddress(ntdll,"NtQueryVirtualMemory");
     if(!NtQueryVirtualMemory){
         MessageBox(NULL,"unable to get address of NtQueryVirtualMemory","error",MB_OK);
-        CloseHandle(proc);
+        CloseHandle(global_proc.proc);
         return;
     }
-    NTSTATUS status = NtQueryVirtualMemory(proc,(LPVOID)base_addr,MemoryBasicInformation,&mbi,sizeof(mbi),0);
+    NTSTATUS status = NtQueryVirtualMemory(global_proc.proc,(LPVOID)base_addr,MemoryBasicInformation,&mbi,sizeof(mbi),0);
 
     while(NT_SUCCESS(status)){
         // memory filter 
@@ -96,47 +108,40 @@ void scan_memory(DWORD proc_id,DWORD target){
                 //fprintf(stdout,"Memory region at 0x%p is committed and accessible.\n", (void*)mbi.BaseAddress);
                 
                 while(start < end){
-                    unsigned int value = read_memory(proc, start);
+                    unsigned int value = read_memory(global_proc.proc, start);
                     if(value == target){
                         address_info *info = malloc(sizeof(address_info));
                         if(!info){
                             //fprintf(stderr,"error in mem alloc");
-                            CloseHandle(proc);
+                            CloseHandle(global_proc.proc);
                             return;
                         }
                         info->addr = start;
                         info->value = value;
                         info->previous = value;
                         add_array_address_info(&global_address_info, info);
-                        free(info);
                     }
                     start += sizeof(int); //increment by 4 bytes to read the next value
                 }
             }
             base_addr += mbi.RegionSize;//move to the next region
-            status = NtQueryVirtualMemory(proc, (LPVOID)base_addr, MemoryBasicInformation, &mbi, sizeof(mbi), NULL);
+            status = NtQueryVirtualMemory(global_proc.proc, (LPVOID)base_addr, MemoryBasicInformation, &mbi, sizeof(mbi), NULL);
         }
-        CloseHandle(proc);
 }
 
 
 void compare_changes(DWORD proc_id,address_arr *arr){
-    HANDLE proc;
-    proc= OpenProcess(PROCESS_QUERY_INFORMATION |PROCESS_VM_READ,FALSE,proc_id);
-
-    if(proc == NULL){
-        //MessageBox(NULL,"ERROR IN GETING PROCESS INFO","ERROR",MB_ICONERROR);
-        return;
-    }
-
     for(int i = 0 ;i< arr->count;i++){
-        unsigned int re_read_value = read_memory(proc,arr->info[i].addr);
+        unsigned int re_read_value = read_memory(global_proc.proc,arr->info[i].addr);
         if(re_read_value != arr->info[i].value){
             arr->info[i].previous = arr->info[i].value;
             arr->info[i].value = re_read_value;
         }
     }
-    CloseHandle(proc);
+}
+
+void  write_to_address(unsigned long long address,unsigned int value){
+    write_memomry(global_proc.proc,value,address);
 }
 /*there is something to consider reagding this and how can i effectively filter out the
 process after a 2nd scan i do not know how to go about that for now what happens is that you initially 

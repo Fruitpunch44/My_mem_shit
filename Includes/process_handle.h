@@ -20,11 +20,11 @@ typedef NTSTATUS(NTAPI *pZwReadVirtualMemory)(
 	  SIZE_T *lpNumberOfBytesRead
 );
 
-typedef NTSTATUS(NTAPI *pZwriteVirtualMemory)( 
+typedef NTSTATUS(NTAPI *pZwWriteVirtualMemory)( 
     HANDLE hProcess,
     LPCVOID BaseAddress,
     LPVOID Buffer,
-    SIZE_T NumberOfBytesToWrite,
+    SIZE_T nSize,
     SIZE_T *NumberOfBytesWritten
 );
 
@@ -44,11 +44,19 @@ typedef struct{
     DWORD Target;
 }thread_params;
 
+typedef struct{
+    HANDLE proc;
+}global_process_handle;
+
 unsigned int read_memory(HANDLE proc,unsigned long long addr);
 void scan_memory(DWORD proc_id,DWORD target);
 //void get_process_id(DWORD proc_id,unsigned long long start);
 void compare_changes(DWORD proc_id,address_arr *arr);
 DWORD WINAPI scan_thread(LPVOID lpParam);
+void write_to_address(unsigned long long address,unsigned int value);
+unsigned int write_memomry(HANDLE proc,UINT value,unsigned long long addr);
+
+
 
 
 #endif
