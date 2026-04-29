@@ -21,6 +21,12 @@ typedef struct{
 }address_info;
 
 typedef struct{
+    unsigned long long addr;
+    unsigned int value;
+    unsigned int previous;
+}filtered_adderess_info;
+
+typedef struct{
     process_info *entries;
     size_t capacity;
     size_t count;
@@ -32,12 +38,22 @@ typedef struct {
     size_t count;
 }address_arr;
 
+typedef struct {
+    filtered_adderess_info *info;
+    size_t capacity;
+    size_t count;
+}filtered_address_arr;
+
 extern address_arr global_address_info;
 extern process_arr global_process;
+extern filtered_address_arr global_filtered_info;
+
 process_arr init_array();
 void add_array(process_arr *array_list,process_info *entries);
 address_arr init_addr_array();
 void add_array_address_info(address_arr *arr,address_info *info);
+void add_array_address_info_filter(filtered_address_arr *arr,filtered_adderess_info *info);
+filtered_address_arr init_filtered_addr_array();
 #endif
 
 

@@ -42,6 +42,7 @@ typedef NTSTATUS(NTAPI *pNtQueryVirtualMemory)(
 typedef struct{
     DWORD pid;
     DWORD Target;
+    HWND  hwnd_test;
 }thread_params;
 
 typedef struct{

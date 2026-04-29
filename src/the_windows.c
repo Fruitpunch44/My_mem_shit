@@ -28,6 +28,7 @@ LRESULT CALLBACK PopupProc(HWND hwnd,UINT msg, WPARAM wparam, LPARAM lparam){
                     MessageBox(NULL,dbg,"dbug",MB_OK);
                     PostMessage(GetParent(hwnd),WM_WRITE_VAL,0,0);   
                     DestroyWindow(hwnd);
+                    break;
                 case ID_POPUP_CANCEL:
                     DestroyWindow(hwnd);
                     break;
@@ -104,6 +105,7 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             CREATE_SCAN(hwnd);
             NEXT_SCAN(hwnd);
             show_selected_process(hwnd);
+            
             HMENU hmenu,hsub,hsub2;
             hmenu=CreateMenu();
 
@@ -139,8 +141,10 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                         thread_params *params = malloc(sizeof(thread_params));
                         params->pid=gwin.pid;
                         params->Target=gwin.value;
+                        params->hwnd_test = hwnd;
                         HANDLE threads=CreateThread(NULL,0,scan_thread,params,0,NULL);
-                        refresh_left_table(hwnd);
+                        CloseHandle(threads);
+                        //do not wait for thread it kind crashes my computer
                     }
                     break;
                 case ID_NEXT_SCAN_BUTTON:
@@ -150,7 +154,7 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                         snprintf(debug_buff,sizeof(debug_buff),"%d",global_address_info.count);
                         MessageBox(NULL,debug_buff,"debug",MB_OK);
                         compare_changes(gwin.pid,&global_address_info);
-                        refresh_left_table(hwnd);
+                        refresh_left_table_filter(hwnd);
                     }
                     break;
                 case ID_COMBO_BOX_DROP:
@@ -167,24 +171,27 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             //the issue was due to the process window being an overlappedwindow 
             SetWindowText(gwin.info, gwin.info_buff);
             break;
+        case WM_SCAN_THREAD_FINISHED:
+            refresh_left_table(hwnd);
+            
+            break;     
         case WM_NOTIFY:
             switch(((LPNMHDR)lparam)->code){
                 case NM_DBLCLK:
                     char addr[64];
                     char buff[128];
-                    unsigned long long address;
                     int pos =ListView_GetNextItem(gwin.hlist_left_table,-1,LVNI_SELECTED);
                     int addr_column  = 0;
                     ListView_GetItemText(gwin.hlist_left_table,pos,addr_column,addr,sizeof(addr));
-                    address = strtoull(addr,NULL,16);
-                    snprintf(buff,sizeof(buff),"the address u selected is 0x%llx",address);
+                    gwin.write_address= strtoull(addr,NULL,16);
+                    snprintf(buff,sizeof(buff),"the address u selected is 0x%llx",gwin.write_address);
                     MessageBox(NULL,buff,"test",MB_OK);
                     create_popup(hwnd);
                     break;
                 }
             break;
         case WM_WRITE_VAL:
-            write_to_address(global_address_info.info[0].addr,gwin.form_value);   
+            write_to_address(gwin.write_address,gwin.form_value);   
             break;
         case WM_DESTROY:
             PostQuitMessage(0);
@@ -207,7 +214,7 @@ HWND create_popup(HWND parent){
     int x_gap = 100;
     int y_gap = 20;
    
-    snprintf(address_buff,sizeof(address_buff)," Writting to 0x%llx",global_address_info.info[0].addr);
+    snprintf(address_buff,sizeof(address_buff)," Writting to 0x%llx",gwin.write_address);
     popup=CreateWindowEx(WS_EX_CLIENTEDGE,"Popupwindow",address_buff,
         WS_POPUPWINDOW|WS_VISIBLE|WS_CAPTION,
         20,20,400,200,parent,
@@ -610,12 +617,45 @@ HWND show_selected_process(HWND Parent){
         NULL);
         return gwin.info;
 }
-
 void refresh_left_table(HWND hwnd){
+        ListView_DeleteAllItems(gwin.hlist_left_table);
+        if(global_address_info.count == 0 ){
+            MessageBox(hwnd,"no readable memory found","info",MB_OK);
+            return;
+        }
+        else if(gwin.pid ==0)
+        {
+            MessageBox(hwnd,"invalid pid for process","info",MB_OK);
+            return;
+        }
+        else{
+                MessageBox(hwnd,"refreshing list","info",MB_OK);
+        }
+        for(size_t i =0 ; i<global_address_info.count;i++){
+            LVITEM item;
+            item.mask = LVIF_TEXT;
+            item.iItem = i;
+            item.iSubItem = 0;
+            char addr_buff[43];
+            sprintf(addr_buff,"0x%llx",global_address_info.info[i].addr);
+            item.pszText = addr_buff;
+            ListView_InsertItem(gwin.hlist_left_table,&item);
+
+            char value[64];
+            snprintf(value,sizeof(value),"%u",global_address_info.info[i].value);
+            ListView_SetItemText(gwin.hlist_left_table,i,1,value);
+
+            char prev[64];
+            snprintf(prev,sizeof(prev),"%u",global_address_info.info[i].previous);
+            ListView_SetItemText(gwin.hlist_left_table,i,2,prev);
+        }
+}
+
+void refresh_left_table_filter(HWND hwnd){
         MessageBox(NULL, "WM_REFRESH received", "DEBUG", MB_OK);
         
             ListView_DeleteAllItems(gwin.hlist_left_table);
-            if(global_address_info.count == 0 ){
+            if(global_filtered_info.count == 0 ){
                 MessageBox(hwnd,"no readable memory found","info",MB_OK);
                 return;
             }
@@ -627,23 +667,23 @@ void refresh_left_table(HWND hwnd){
             else{
                  MessageBox(hwnd,"refreshing list","info",MB_OK);
             }
-            for(size_t i =0 ; i<global_address_info.count;i++){
+            for(size_t i =0 ; i<global_filtered_info.count;i++){
                 LVITEM item;
                 item.mask = LVIF_TEXT;
                 item.iItem = i;
                 item.iSubItem = 0;
-                static char addr_buff[43];
-                sprintf(addr_buff,"0x%llx",global_address_info.info[i].addr);
-                item.pszText = addr_buff;
+                char addr_buff_filter[43];
+                sprintf(addr_buff_filter,"0x%llx",global_filtered_info.info[i].addr);
+                item.pszText = addr_buff_filter;
                 ListView_InsertItem(gwin.hlist_left_table,&item);
 
-                static char value[64];
-                snprintf(value,sizeof(value),"%u",global_address_info.info[i].value);
-                ListView_SetItemText(gwin.hlist_left_table,i,1,value);
+                char value_filter[64];
+                snprintf(value_filter,sizeof(value_filter),"%u",global_filtered_info.info[i].value);
+                ListView_SetItemText(gwin.hlist_left_table,i,1,value_filter);
 
-                static char prev[64];
-                snprintf(prev,sizeof(prev),"%u",global_address_info.info[i].previous);
-                ListView_SetItemText(gwin.hlist_left_table,i,2,prev);
+                char prev_filter[64];
+                snprintf(prev_filter,sizeof(prev_filter),"%u",global_filtered_info.info[i].previous);
+                ListView_SetItemText(gwin.hlist_left_table,i,2,prev_filter);
         }
 }
 
@@ -686,7 +726,7 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
     wc3.hInstance= GetModuleHandle(NULL);
     wc3.lpszClassName = "Popupwindow";
     wc3.hCursor = LoadCursor(NULL,IDC_ARROW);
-    wc2.hbrBackground = (HBRUSH)(COLOR_WINDOW+1);
+    wc3.hbrBackground = (HBRUSH)(COLOR_WINDOW+1);
 
 
     if(!RegisterClassEx(&wc)){

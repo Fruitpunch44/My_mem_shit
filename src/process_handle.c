@@ -1,11 +1,13 @@
 #include "process_handle.h"
 #include "process_array.h"
 
+
+
 // void write_memory(HANDLE process, BYTE *address,BYTE value);
 //add range scan
 address_arr global_address_info;
+filtered_address_arr global_filtered_info;
 global_process_handle global_proc;
-
 //if void can handle various types i don't know;
 
 unsigned int write_memomry(HANDLE proc,UINT value,unsigned long long addr){
@@ -37,7 +39,7 @@ unsigned int read_memory(HANDLE proc,unsigned long long addr){
     SIZE_T number_of_bytes_read;
 
     //try to fix this 
-    unsigned int *buff = malloc(sizeof(int)* BUFF_SIZE);
+    unsigned int *buff = malloc(sizeof(int)* BUFF_SIZE);//chnage this 
     HMODULE ntdll = GetModuleHandle("ntdll.dll");
     pZwReadVirtualMemory ZwReadVirtualMemory = (pZwReadVirtualMemory)GetProcAddress(ntdll,"ZwReadVirtualMemory");
     if(!ZwReadVirtualMemory){
@@ -62,14 +64,20 @@ unsigned int read_memory(HANDLE proc,unsigned long long addr){
         free(buff);
         return 0;
     }
+    unsigned int value = *buff;
     free(buff);
-    return *buff;
+    return value;
 }
 
 DWORD WINAPI scan_thread(LPVOID lpParam){
     //cast the struct pointer to lparam
     thread_params *params = (thread_params*)lpParam;
     scan_memory(params->pid,params->Target);
+    PostMessage(params->hwnd_test,WM_USER+4,0,0);//POST TO WM_SCAN_THREAD_FINISHED;
+
+    char dbg[100];
+    snprintf(dbg, sizeof(dbg), "Posting WM_SCAN_THREAD_FINISHED to: %p", params->hwnd_test);//debugging
+    MessageBox(NULL, dbg, "DEBUG POST", MB_OK);//debugging
     free(params);
     return 0;
 }
@@ -131,11 +139,19 @@ void scan_memory(DWORD proc_id,DWORD target){
 
 
 void compare_changes(DWORD proc_id,address_arr *arr){
+    global_filtered_info = init_filtered_addr_array();
     for(int i = 0 ;i< arr->count;i++){
         unsigned int re_read_value = read_memory(global_proc.proc,arr->info[i].addr);
         if(re_read_value != arr->info[i].value){
-            arr->info[i].previous = arr->info[i].value;
-            arr->info[i].value = re_read_value;
+            filtered_adderess_info *filtered_info = malloc(sizeof(filtered_adderess_info));
+            if(!filtered_info){
+                MessageBox(NULL,"error in mem alloc","error",MB_ICONERROR);
+                return;
+            }
+            filtered_info->addr = arr->info[i].addr;
+            filtered_info->value = re_read_value;
+            filtered_info->previous = arr->info[i].value;
+            add_array_address_info_filter(&global_filtered_info,filtered_info);
         }
     }
 }
