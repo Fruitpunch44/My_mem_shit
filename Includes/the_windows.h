@@ -21,6 +21,7 @@ HWND show_selected_process(HWND Parent);
 HWND CREATE_COMBO_BOX(HWND Parent);
 HWND NEXT_SCAN(HWND Parent);
 HWND create_popup(HWND parent);
+HWND create_status_bar(HWND Parent);
 
 typedef struct{
     HWND hList;//global handle for the process list to be able to
@@ -30,6 +31,7 @@ typedef struct{
     HWND h_options;//handle for passing value to scan for
     HWND my_drop_down; //handle for the drop down selection
     HWND address_form;//handle for address field in the popup window for writting to an adddress
+    HWND bar; //handle for status bar
     int pid;//make pid global
     unsigned int value;//value gotten from the input text field
     unsigned int form_value;//value gotten from the address form 
@@ -60,4 +62,4 @@ extern global_window_states gwin;
 #define ID_POPUP_WRITE      60013 //WRITE IN POPUP WIN
 #define ID_POPUP_CANCEL     60014 //CANCEL BUTTON IN POPUP WIN
 #define ID_POPUP_FORM       60015 //INPUT FORM IN POPUP WIN
-
+#define ID_STATUS_BAR       60014//STATUS BAR

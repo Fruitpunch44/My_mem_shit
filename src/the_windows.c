@@ -105,6 +105,7 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             CREATE_SCAN(hwnd);
             NEXT_SCAN(hwnd);
             show_selected_process(hwnd);
+            create_status_bar(hwnd);
             
             HMENU hmenu,hsub,hsub2;
             hmenu=CreateMenu();
@@ -150,11 +151,11 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                 case ID_NEXT_SCAN_BUTTON:
                     if(HIWORD(wparam)==BN_CLICKED){
                         MessageBeep(MB_ICONINFORMATION);
-                        char debug_buff[100];
-                        snprintf(debug_buff,sizeof(debug_buff),"%d",global_address_info.count);
-                        MessageBox(NULL,debug_buff,"debug",MB_OK);
+                        char address_buff[100];
+                        snprintf(address_buff,sizeof(address_buff)," filtered adrress: %d",global_filtered_info.count);
                         compare_changes(gwin.pid,&global_address_info);
                         refresh_left_table_filter(hwnd);
+                        SendMessage(gwin.bar,SB_SETTEXT,1,(LPARAM)address_buff);
                     }
                     break;
                 case ID_COMBO_BOX_DROP:
@@ -170,11 +171,19 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             //this is not being called after the post message for some reason
             //the issue was due to the process window being an overlappedwindow 
             SetWindowText(gwin.info, gwin.info_buff);
+            SendMessage(gwin.bar,SB_SETTEXT,0,(LPARAM)gwin.info_buff);
             break;
         case WM_SCAN_THREAD_FINISHED:
             refresh_left_table(hwnd);
-            
+            char address_buff[100];
+            snprintf(address_buff,sizeof(address_buff),"Address Count: %d",global_address_info.count);
+            SendMessage(gwin.bar,SB_SETTEXT,1,(LPARAM)address_buff);
+
             break;     
+        case WM_SIZE:
+            SendMessage(gwin.bar,WM_SIZE,0,0);
+            break;
+            
         case WM_NOTIFY:
             switch(((LPNMHDR)lparam)->code){
                 case NM_DBLCLK:
@@ -518,6 +527,16 @@ HWND CREATE_BOTTOM_LIST(HWND PARENT){
     ListView_InsertColumn(hlist_bottom,3,&col4);
 
     return hlist_bottom;
+
+}
+HWND create_status_bar(HWND Parent){
+    gwin.bar=CreateWindowEx(0,STATUSCLASSNAME,NULL,CCS_BOTTOM|WS_CHILD|WS_VISIBLE,
+        0,0,0,0,
+        Parent,(HMENU)ID_STATUS_BAR,GetModuleHandle(NULL),NULL);
+    
+    int widths[] ={100,-1};
+    SendMessage(gwin.bar,SB_SETPARTS,sizeof(widths)/sizeof(int),(LPARAM)widths);
+    return gwin.bar;
 
 }
 HWND CREATE_LIST(HWND PARENT,process_arr *array){ 
