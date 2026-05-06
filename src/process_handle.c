@@ -83,6 +83,7 @@ DWORD WINAPI scan_thread(LPVOID lpParam){
 }
 
 void scan_memory(DWORD proc_id,DWORD target){
+    free_address_array(&global_address_info);
     global_address_info = init_addr_array();
     MEMORY_BASIC_INFORMATION mbi ={0};
     unsigned long long base_addr = 0;
@@ -139,6 +140,7 @@ void scan_memory(DWORD proc_id,DWORD target){
 
 
 void compare_changes(DWORD proc_id,address_arr *arr){
+    free_filtered_address_array(&global_filtered_info);
     global_filtered_info = init_filtered_addr_array();
     for(int i = 0 ;i< arr->count;i++){
         unsigned int re_read_value = read_memory(global_proc.proc,arr->info[i].addr);

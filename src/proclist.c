@@ -1,9 +1,9 @@
 #include"proclist.h"
 #include"process_array.h"
 
-
 process_arr global_process;
 BOOL getproclist(){
+    free_process_array(&global_process);
     global_process =init_array();
     HANDLE hprocsnap;
     HANDLE process;
@@ -58,8 +58,6 @@ BOOL getproclist(){
         info->Thread=entry32.cntThreads;
         add_array(&global_process,info);
         listprocmodules(entry32.th32ProcessID);
-        free(info);
-
     }
     CloseHandle(hprocsnap);
     CloseHandle(process);  

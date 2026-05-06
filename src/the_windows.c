@@ -71,8 +71,8 @@ LRESULT CALLBACK ProcessProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
 
                 ListView_GetItemText(gwin.hList,pos,name_colunm,name_buff,sizeof(name_buff));
 
-                MessageBox(hwnd, name_buff, "Select process name", MB_OK);//debuging
-                MessageBox(hwnd, pid_buff, "Selected PID", MB_OK);//debuging
+                //MessageBox(hwnd, name_buff, "Select process name", MB_OK);//debuging
+                //MessageBox(hwnd, pid_buff, "Selected PID", MB_OK);//debuging
                 snprintf(gwin.info_buff,sizeof(gwin.info_buff),"%s - %d",name_buff,gwin.pid);
 
                
@@ -145,7 +145,8 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
                         params->hwnd_test = hwnd;
                         HANDLE threads=CreateThread(NULL,0,scan_thread,params,0,NULL);
                         CloseHandle(threads);
-                        //do not wait for thread it kind crashes my computer
+                        SendMessage(gwin.bar,SB_SETTEXT,2,(LPARAM)"Scanning");
+                        //do not wait for thread it kinda crashes my computer
                     }
                     break;
                 case ID_NEXT_SCAN_BUTTON:
@@ -178,6 +179,7 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             char address_buff[100];
             snprintf(address_buff,sizeof(address_buff),"Address Count: %d",global_address_info.count);
             SendMessage(gwin.bar,SB_SETTEXT,1,(LPARAM)address_buff);
+            SendMessage(gwin.bar,SB_SETTEXT,2,(LPARAM)"Done");
 
             break;     
         case WM_SIZE:
@@ -185,19 +187,27 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             break;
             
         case WM_NOTIFY:
-            switch(((LPNMHDR)lparam)->code){
+            LPNMHDR pnmh = (LPNMHDR)lparam;
+            switch(pnmh->code){
                 case NM_DBLCLK:
-                    char addr[64];
-                    char buff[128];
-                    int pos =ListView_GetNextItem(gwin.hlist_left_table,-1,LVNI_SELECTED);
-                    int addr_column  = 0;
-                    ListView_GetItemText(gwin.hlist_left_table,pos,addr_column,addr,sizeof(addr));
-                    gwin.write_address= strtoull(addr,NULL,16);
-                    snprintf(buff,sizeof(buff),"the address u selected is 0x%llx",gwin.write_address);
-                    MessageBox(NULL,buff,"test",MB_OK);
-                    create_popup(hwnd);
-                    break;
+                    int pos = ListView_GetNextItem(gwin.hlist_left_table,-1,LVNI_SELECTED);
+                    if(pnmh->idFrom == ID_LEFT_TABLE){
+                        char addr[64];
+                        char buff[128];
+                        int pos =ListView_GetNextItem(gwin.hlist_left_table,-1,LVNI_SELECTED);
+                        int addr_column  = 0;
+                        
+                        //check to make sure the item is selected first before calling write function
+                        if(pos != -1){
+                            ListView_GetItemText(gwin.hlist_left_table,pos,addr_column,addr,sizeof(addr));
+                            gwin.write_address= strtoull(addr,NULL,16);
+                            snprintf(buff,sizeof(buff),"the address u selected is 0x%llx",gwin.write_address);
+                            MessageBox(NULL,buff,"test",MB_OK);
+                            create_popup(hwnd);
+                        }   
+                        break;
                 }
+            }
             break;
         case WM_WRITE_VAL:
             write_to_address(gwin.write_address,gwin.form_value);   
@@ -207,7 +217,7 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam){
             break;
         default:
             return DefWindowProc(hwnd,msg,wparam,lparam);
-    }
+        }
     return 0;
 }
 
@@ -404,10 +414,8 @@ HWND CREATE_LEFT_SIDE_Table(HWND PARENT,address_arr *addr_arr){
             "",
             WS_CHILD | WS_VISIBLE | LVS_REPORT,
             20,40,400,300,
-            PARENT,
-            NULL,
-            GetModuleHandle(NULL),
-            NULL
+            PARENT,(HMENU)ID_LEFT_TABLE,
+            GetModuleHandle(NULL),NULL
             );
             
     LVCOLUMN col;
@@ -428,20 +436,6 @@ HWND CREATE_LEFT_SIDE_Table(HWND PARENT,address_arr *addr_arr){
     col3.pszText = "Previous";
     ListView_InsertColumn(gwin.hlist_left_table,2,&col3);
 
-     for(size_t i =0 ; i<addr_arr->count;i++){
-            LVITEM item = {0};
-            item.mask = LVIF_TEXT;
-            item.iItem = (int)i;
-            item.iSubItem = 0;
-            static char buff[43];
-            sprintf(buff,"0x%llx",addr_arr->info[i].addr);
-            item.pszText = buff;
-            ListView_InsertItem(gwin.hlist_left_table,&item);
-
-            /*char value[64];
-            snprintf(value,sizeof(value),"%d",addr_arr->info[i].values);
-            ListView_SetItemText(gwin.hlist_left_table,i,1,value);*/  
-    }
     return gwin.hlist_left_table;
 }
         
@@ -534,7 +528,7 @@ HWND create_status_bar(HWND Parent){
         0,0,0,0,
         Parent,(HMENU)ID_STATUS_BAR,GetModuleHandle(NULL),NULL);
     
-    int widths[] ={100,-1};
+    int widths[] ={100,400,-1};
     SendMessage(gwin.bar,SB_SETPARTS,sizeof(widths)/sizeof(int),(LPARAM)widths);
     return gwin.bar;
 
@@ -684,7 +678,7 @@ void refresh_left_table_filter(HWND hwnd){
                 return;
             }
             else{
-                 MessageBox(hwnd,"refreshing list","info",MB_OK);
+                MessageBox(hwnd,"refreshing list","info",MB_OK);
             }
             for(size_t i =0 ; i<global_filtered_info.count;i++){
                 LVITEM item;
@@ -731,6 +725,14 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
     wc.lpszClassName = "myWindowClass";
     wc.hIconSm = LoadIcon(NULL,IDI_APPLICATION);
 
+     if(!RegisterClassEx(&wc)){
+        char err_mess[50];
+        DWORD err= GetLastError();
+        MessageBox(NULL,"Window Registration Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
+        snprintf(err_mess,sizeof(err_mess),"%d",err);
+        MessageBox(NULL,err_mess,"error code",MB_ICONEXCLAMATION|MB_OK); 
+        return 0;
+    }
     //process list window class
     wc2.cbSize=sizeof(WNDCLASSEX);
     wc2.lpfnWndProc =ProcessProc;
@@ -739,23 +741,6 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
     wc2.hCursor = LoadCursor(NULL,IDC_ARROW);
     wc2.hbrBackground = (HBRUSH)(COLOR_WINDOW+1);
 
-    //process window class
-    wc3.cbSize=sizeof(WNDCLASSEX);
-    wc3.lpfnWndProc = PopupProc;
-    wc3.hInstance= GetModuleHandle(NULL);
-    wc3.lpszClassName = "Popupwindow";
-    wc3.hCursor = LoadCursor(NULL,IDC_ARROW);
-    wc3.hbrBackground = (HBRUSH)(COLOR_WINDOW+1);
-
-
-    if(!RegisterClassEx(&wc)){
-        char err_mess[50];
-        DWORD err= GetLastError();
-        MessageBox(NULL,"Window Registration Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
-        snprintf(err_mess,sizeof(err_mess),"%d",err);
-        MessageBox(NULL,err_mess,"error code",MB_ICONEXCLAMATION|MB_OK); 
-        return 0;
-    }
     if(!RegisterClassEx(&wc2)){
         char err_mess[50];
         DWORD err= GetLastError();
@@ -765,6 +750,14 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
         return 0;
     }
 
+    //process window class
+    wc3.cbSize=sizeof(WNDCLASSEX);
+    wc3.lpfnWndProc = PopupProc;
+    wc3.hInstance= GetModuleHandle(NULL);
+    wc3.lpszClassName = "Popupwindow";
+    wc3.hCursor = LoadCursor(NULL,IDC_ARROW);
+    wc3.hbrBackground = (HBRUSH)(COLOR_WINDOW+1);
+
     if(!RegisterClassEx(&wc3)){
         char err_mess[50];
         DWORD err= GetLastError();
@@ -773,6 +766,8 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
         MessageBox(NULL,err_mess,"error code",MB_ICONEXCLAMATION|MB_OK); 
         return 0;
     }
+
+    //create main window
     hwnd = CreateWindowEx(WS_EX_CLIENTEDGE,"myWindowClass","Sucky scan",
         WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,CW_USEDEFAULT,860,680,NULL,NULL,hInstance,NULL);
 
@@ -780,7 +775,7 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
         MessageBox(NULL,"Window Creation Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
         return 0;
     }
-  
+
     ShowWindow(hwnd,nCmdShow);
     UpdateWindow(hwnd);
     while(GetMessage(&msg,NULL,0,0) > 0){

@@ -9,8 +9,9 @@ process_arr init_array(){
 }
 
 void add_array(process_arr *arr,process_info *info){
+    size_t new_cap;
     if(arr->count == arr->capacity){
-        size_t new_cap = arr->capacity*=2;
+       new_cap = arr->capacity*=2;
         process_info *temp;
         temp=realloc(arr->entries,arr->capacity *sizeof(process_info));
         if(!temp){
@@ -40,8 +41,12 @@ filtered_address_arr init_filtered_addr_array(){
 }
 
 void add_array_address_info(address_arr *arr,address_info *info){
-     if(arr->count == arr->capacity){
-        size_t new_cap = arr->capacity*=2;
+    size_t new_cap;
+    if(arr->count == arr->capacity){
+       new_cap = arr->capacity*=2;
+       if(arr->capacity == 0){
+        new_cap = arr->capacity = 10;
+       }
         address_info *temp;
         temp=realloc(arr->info,arr->capacity *sizeof(address_info));
         if(!temp){
@@ -55,8 +60,12 @@ void add_array_address_info(address_arr *arr,address_info *info){
 }
 
 void add_array_address_info_filter(filtered_address_arr *arr,filtered_adderess_info *info){
-     if(arr->count == arr->capacity){
-        size_t new_cap = arr->capacity*=2;
+    size_t new_cap;
+    if(arr->count == arr->capacity){
+       new_cap = arr->capacity*=2;
+       if(arr->capacity == 0){
+        new_cap = arr->capacity = 10;
+       }
         filtered_adderess_info *temp;
         temp=realloc(arr->info,arr->capacity *sizeof(filtered_adderess_info));
         if(!temp){
@@ -67,4 +76,25 @@ void add_array_address_info_filter(filtered_address_arr *arr,filtered_adderess_i
         arr->capacity =new_cap;
     }
     arr->info[arr->count++]=*info;
+}
+void free_address_array(address_arr *arr){
+    free(arr->info);
+    arr->info=NULL;
+    arr->capacity=0;
+    arr->count=0;
+}
+void free_process_array(process_arr *arr){
+    for(size_t i =0 ;i<arr->count;i++){
+        free(arr->entries[i].NAME);//free all string values
+    }
+    free(arr->entries);
+    arr->entries=NULL;
+    arr->capacity=0;
+    arr->count=0;
+}
+void free_filtered_address_array(filtered_address_arr *arr){
+    free(arr->info);
+    arr->info=NULL;
+    arr->capacity=0;
+    arr->count=0;
 }

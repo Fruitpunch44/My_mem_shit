@@ -54,6 +54,9 @@ address_arr init_addr_array();
 void add_array_address_info(address_arr *arr,address_info *info);
 void add_array_address_info_filter(filtered_address_arr *arr,filtered_adderess_info *info);
 filtered_address_arr init_filtered_addr_array();
+void free_address_array(address_arr *arr);
+void free_process_array(process_arr *arr);
+void free_filtered_address_array(filtered_address_arr *arr);
 #endif
 
 

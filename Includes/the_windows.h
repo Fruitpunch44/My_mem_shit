@@ -45,7 +45,7 @@ extern global_window_states gwin;
 //objects within the window
 #define IDR_MYMENU          101 //MY MENU
 #define WM_REFRESH          (WM_USER+1) // handle this for refreshing the list after a scan
-#define WM_WRITE_VAL        (WM_USER+3)// handle for 
+#define WM_WRITE_VAL        (WM_USER+3)// handle for writing values
 #define WM_SCAN_THREAD_FINISHED (WM_USER+4) //handle for when the scan thread is finished so we can refresh the list
 #define ID_FILE_EXIT        60001//pop up menu exit
 #define ID_HELP_ABOUT       60002//pop up menu help
@@ -62,4 +62,5 @@ extern global_window_states gwin;
 #define ID_POPUP_WRITE      60013 //WRITE IN POPUP WIN
 #define ID_POPUP_CANCEL     60014 //CANCEL BUTTON IN POPUP WIN
 #define ID_POPUP_FORM       60015 //INPUT FORM IN POPUP WIN
-#define ID_STATUS_BAR       60014//STATUS BAR
+#define ID_STATUS_BAR       60016//STATUS BAR
+#define ID_LEFT_TABLE       60017//LEFT TABLE
