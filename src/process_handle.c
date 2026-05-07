@@ -4,7 +4,7 @@
 
 
 // void write_memory(HANDLE process, BYTE *address,BYTE value);
-//add range scan
+//add range scan dumb comment
 address_arr global_address_info;
 filtered_address_arr global_filtered_info;
 global_process_handle global_proc;
